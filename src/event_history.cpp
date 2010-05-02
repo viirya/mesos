@@ -112,6 +112,7 @@ int EventLogger::logEvent(int num_pairs, ...) {
   //TODO: check that num_pairs is odd and positive 
   map<string,string> ev = map<string,string>();
   char * key, * val;
+  //TODO: accept values other than strings, ints?
   for (int i = 0; i < num_pairs; i++) {
     key = va_arg(args, char *);
     val = va_arg(args, char *);
@@ -127,9 +128,9 @@ int EventLogger::logEvent(int num_pairs, ...) {
 //
 //}
 
-int main(int args, char** argv) {
-  EventLogger evLogger = EventLogger();
-  evLogger.logEvent(3, "test-key","test-val", "test-key2", "test-val2", "test-key3", "test-val3");
-  //future api ideas: 
-  //evLogger ("event-key-A","event-key-B");
-}
+//int main(int args, char** argv) {
+//  EventLogger evLogger = EventLogger();
+//  evLogger.logEvent(3, "test-key","test-val", "test-key2", "test-val2", "test-key3", "test-val3");
+//  //future api ideas: 
+//  //evLogger ("event-key-A","event-key-B");
+//}
