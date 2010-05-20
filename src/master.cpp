@@ -5,6 +5,7 @@
 #include "master.hpp"
 #include "master_webui.hpp"
 #include <iostream>
+#include <sys/time.h>
 
 #include "event_history.hpp"
 
@@ -81,6 +82,9 @@ protected:
 
       uint32_t total_cpus = 0;
       uint64_t total_mem = 0;
+      struct timeval curr_time;
+      struct timezone tzp;
+      gettimeofday(&curr_time, &tzp);
 
       foreach (state::Slave *s, state->slaves) {
         total_cpus += s->cpus;
@@ -94,7 +98,7 @@ protected:
           double cpu_share = f->cpus / (double) total_cpus;
           double mem_share = f->mem / (double) total_mem;
           double max_share = max(cpu_share, mem_share);
-          file << tick << "#" << f->id << "#" << f->name << "#" 
+          file << tick << "#" << (curr_time.tv_sec * 1000000 + curr_time.tv_usec) << "#" << f->id << "#" << f->name << "#" 
                << f->cpus << "#" << f->mem << "#"
                << cpu_share << "#" << mem_share << "#" << max_share << endl;
         }
