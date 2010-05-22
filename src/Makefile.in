@@ -26,8 +26,10 @@ LIBEV = third_party/libprocess/third_party/libev-3.8
 
 GLOG = third_party/glog-0.3.1
 GTEST = third_party/gtest-1.5.0
+SQLITE = third_party/sqlite-3.6.23.1
 
 ZOOKEEPER = third_party/zookeeper-3.3.1/src/c
+
 
 # Ensure that we get better debugging info.
 CFLAGS += -g
@@ -54,8 +56,8 @@ LDFLAGS += -Lthird_party/libprocess
 LDFLAGS += -L$(LIBEV)/.libs
 
 # Add glog and gtest to include and lib paths.
-CXXFLAGS += -I$(GLOG)/src -I$(GTEST)/include
-LDFLAGS += -L$(GLOG)/.libs -L$(GTEST)/lib/.libs
+CXXFLAGS += -I$(GLOG)/src -I$(GTEST)/include -I$(SQLITE)/
+LDFLAGS += -L$(GLOG)/.libs -L$(GTEST)/lib/.libs -L$(SQLITE)/.libs
 
 # Add local ZooKeeper to include and lib paths if necessary.
 ifeq ($(LOCAL_ZOOKEEPER),yes)
@@ -79,7 +81,7 @@ CXXFLAGS += -DBUILD_USER="\"$$USER\""
 LDFLAGS += -L$(LIBEV)/.libs
 
 # Add libev, libprocess, pthread, and dl to LIBS.
-LIBS += -lglog -lgtest -lprocess -lev -lpthread -ldl -lzookeeper_st
+LIBS += -lglog -lgtest -lprocess -lev -lpthread -ldl -lzookeeper_st -lsqlite3
 
 NEXUS_EXES = nexus-master nexus-slave nexus-local nexus-launcher alltests \
 	     test-framework test-executor cpp-test-framework cpp-test-executor \
@@ -262,6 +264,7 @@ third_party:
 	$(MAKE) -C third_party/libprocess
 	$(MAKE) -C $(GLOG)
 	$(MAKE) -C $(GTEST)
+	$(MAKE) -C $(SQLITE)
 ifeq ($(LOCAL_ZOOKEEPER),yes)
 	$(MAKE) -C $(ZOOKEEPER)
 endif
@@ -272,6 +275,7 @@ clean:
 	$(MAKE) -C third_party/libprocess clean
 	$(MAKE) -C $(GLOG) clean
 	$(MAKE) -C $(GTEST) clean
+	$(MAKE) -C $(SQLITE) clean
 ifeq ($(LOCAL_ZOOKEEPER),yes)
 	$(MAKE) -C $(ZOOKEEPER) clean
 endif

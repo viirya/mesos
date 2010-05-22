@@ -757,26 +757,30 @@ void Master::processOfferReply(SlotOffer *offer,
     idsInResponse.insert(t.taskId);
   }
 
-  //Record the resources in event_history
-  //TODO: first record them when offer is made then, update them here
-  EventLogger evLogger = EventLogger();
-  foreachpair (Slave *s, Resources& respRes, responseResources) {
-    Resources &offRes = offerResources[s];
-    stringstream ss;//create a stringstream
-    ss << framework;//add number to the stream
+
+  foreach (const TaskDescription &t, tasks) {
+    // Record the resources in event_history and then
+    Params params(t.params);
+    Resources res(params.getInt32("cpus", -1),
+                  params.getInt64("mem", -1));
+
+    EventLogger evLogger = EventLogger();
+
+    //construct fw id and resource strings
+    stringstream ss;
+
+    ss << framework;
     string frameworkIDStr = ss.str();
-
-    ss << respRes.cpus;
+    ss << res.cpus;
     string cpusStr = ss.str();
-
-    ss << respRes.mem;
+    ss << res.mem;
     string memStr = ss.str();
 
-    evLogger.logEvent(4, "event-type", "offer-accepted", "frameworkID", frameworkIDStr.c_str(), "cpus", cpusStr.c_str(), "mem", memStr.c_str());
-  }
+    //evLogger.logEvent(4, "event-type", "offer-accepted", "frameworkID", frameworkIDStr.c_str(), "cpus", cpusStr.c_str(), "mem", memStr.c_str());
 
-  // Launch the tasks in the response
-  foreach (const TaskDescription &t, tasks) {
+    evLogger.createTask(t.taskId, t.slaveId, res);
+
+    // Launch the tasks in the response
     launchTask(framework, t);
   }
 
