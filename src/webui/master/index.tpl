@@ -8,6 +8,23 @@
 <head>
 <title>Nexus Master on {{HOSTNAME}}</title>
 <link rel="stylesheet" type="text/css" href="/static/stylesheet.css" />
+  <script type='text/javascript' src='http://www.google.com/jsapi'></script>
+  <script type='text/javascript'>
+    google.load('visualization', '1', {'packages':['annotatedtimeline']});
+    google.setOnLoadCallback(drawChart);
+    function drawChart() {
+      //var url = "http://google-visualization.appspot.com/python/dynamic_example";
+      var url = "utilization_table";
+      var query = new google.visualization.Query(url);
+      query.send(handleQueryResponse);
+    }
+
+      function handleQueryResponse(response) { 
+        var data = response.getDataTable();
+        var chart = new google.visualization.AnnotatedTimeLine(document.getElementById('chart_div'));
+        chart.draw(data, {displayAnnotations: true});
+      }
+  </script>
 </head>
 <body>
 
@@ -168,6 +185,9 @@ Idle: {{idle_cpus}} CPUs, {{format_mem(idle_mem)}} MEM<br />
 %else:
   <p>No offers are active.</p>
 %end
+
+<h2>Cluster Utilization</h2>
+<div id='chart_div' style='width: 700px; height: 240px;'></div>
 
 </body>
 </html>
