@@ -119,12 +119,15 @@ public:
 
 Master::Master(const string& _allocatorType)
   : nextFrameworkId(0), nextSlaveId(0), nextSlotOfferId(0),
-    allocatorType(_allocatorType), masterId(0) {}
+    allocatorType(_allocatorType), masterId(0) {
+  evLogger = new EventLogger;
+}
                    
 
 Master::~Master()
 {
   LOG(INFO) << "Shutting down master";
+  delete evLogger;
 
   delete allocator;
 
@@ -306,6 +309,7 @@ void Master::operator () ()
 				     framework->user,
 				     framework->executorInfo);
       LOG(INFO) << "Registering " << framework << " at " << framework->pid;
+      evLogger->logCreateFramework(fid, framework->user);
       frameworks[fid] = framework;
       pidToFid[framework->pid] = fid;
       link(framework->pid);
@@ -764,8 +768,6 @@ void Master::processOfferReply(SlotOffer *offer,
     Resources res(params.getInt32("cpus", -1),
                   params.getInt64("mem", -1));
 
-    EventLogger evLogger = EventLogger();
-
     //construct fw id and resource strings
     stringstream ss;
 
@@ -776,9 +778,9 @@ void Master::processOfferReply(SlotOffer *offer,
     ss << res.mem;
     string memStr = ss.str();
 
-    //evLogger.logEvent(4, "event-type", "offer-accepted", "frameworkID", frameworkIDStr.c_str(), "cpus", cpusStr.c_str(), "mem", memStr.c_str());
+    //evLogger->logEvent(4, "event-type", "offer-accepted", "frameworkID", frameworkIDStr.c_str(), "cpus", cpusStr.c_str(), "mem", memStr.c_str());
 
-    evLogger.createTask(t.taskId, t.slaveId, res);
+    evLogger->logCreateTask(t.taskId, t.slaveId, res);
 
     // Launch the tasks in the response
     launchTask(framework, t);

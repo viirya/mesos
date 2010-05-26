@@ -7,8 +7,81 @@
 <html>
 <head>
 <title>Nexus Master on {{HOSTNAME}}</title>
+<!-- Combo-handled YUI CSS files: -->
+<link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/combo?2.8.1/build/paginator/assets/skins/sam/paginator.css&2.8.1/build/datatable/assets/skins/sam/datatable.css&2.8.1/build/logger/assets/skins/sam/logger.css">
+<!-- Combo-handled YUI JS files: -->
+<script type="text/javascript" src="http://yui.yahooapis.com/combo?2.8.1/build/yahoo/yahoo-debug.js&2.8.1/build/event/event-debug.js&2.8.1/build/connection/connection-debug.js&2.8.1/build/dom/dom-debug.js&2.8.1/build/element/element-debug.js&2.8.1/build/paginator/paginator-debug.js&2.8.1/build/datasource/datasource-debug.js&2.8.1/build/datatable/datatable-debug.js&2.8.1/build/json/json-debug.js&2.8.1/build/logger/logger-debug.js"></script>
+
+<script type='text/javascript'>
+//Copied from http://developer.yahoo.com/yui/examples/datatable/dt_xhrjson.html
+
+//SETUP TASKS TABLE
+YAHOO.util.Event.addListener(window, "load", function() {
+  YAHOO.example.XHR_JSON = new function() {
+    var myColumnDefs = [
+        {key:"taskid", label:"Task ID", sortable:true},
+        {key:"fwid", label:"FW ID", sortable:true},
+        {key:"date_created", label:"Date-time created", sortable:true, formatter:YAHOO.widget.DataTable.formatDate}, 
+        {key:"resource_list.cpus", label:"Num Cores", sortable:true, formatter:YAHOO.widget.DataTable.formatNumber},
+        {key:"resource_list.mem", label:"Memory(MB)", sortable:true, formatter:YAHOO.widget.DataTable.formatNumber}
+    ];
+
+    this.tasksDataSource = new YAHOO.util.DataSource("tasks_json");
+    this.tasksDataSource.responseType = YAHOO.util.DataSource.TYPE_JSON;
+    this.tasksDataSource.connXhrMode = "queueRequests";
+    this.tasksDataSource.responseSchema = {
+        resultsList: "ResultSet.Items",
+        fields: ["taskid","fwid",{key:"date_created",parser:"date"},{key:"resource_list.cpus",parser:"number"},{key:"resource_list.mem",parser:"number"}]
+    };
+
+    this.myDataTable = new YAHOO.widget.DataTable("tasks_table", myColumnDefs,
+            this.tasksDataSource);
+  };
+});
+
+//SETUP FRAMEWORKS TABLE
+YAHOO.util.Event.addListener(window, "load", function() {
+  YAHOO.example.XHR_JSON = new function() {
+    var myColumnDefs = [
+        {key:"fwid", label:"FW ID", sortable:true},
+        {key:"user", label:"User", sortable:true},
+        {key:"date_created", label:"Date-time created", sortable:true, formatter:YAHOO.widget.DataTable.formatDate} 
+    ];
+
+    this.fwDataSource = new YAHOO.util.DataSource("frameworks_json");
+    this.fwDataSource.responseType = YAHOO.util.DataSource.TYPE_JSON;
+    this.fwDataSource.connXhrMode = "queueRequests";
+    this.fwDataSource.responseSchema = {
+        resultsList: "ResultSet.Items",
+        fields: ["fwid","user",{key:"date_created",parser:"date"}]
+    };
+
+    this.myDataTable = new YAHOO.widget.DataTable("frameworks_table",
+             myColumnDefs, this.fwDataSource);
+/*
+    var myColumnDefs = [
+        {key:"taskid"}//, sortable:true}
+    ];
+
+    this.myDataSource = new YAHOO.util.DataSource("test");
+    this.myDataSource.responseType = YAHOO.util.DataSource.TYPE_JSON;
+    //this.myDataSource.connXhrMode = "queueRequests";
+    this.myDataSource.responseSchema = {
+        resultsList: "ResultSet.Items",
+        fields: ["taskid"]
+    };
+
+    this.myDataTable = new YAHOO.widget.DataTable("json", myColumnDefs,
+                this.myDataSource);
+*/
+  };
+});
+</script>
+
+
+
 <link rel="stylesheet" type="text/css" href="/static/stylesheet.css" />
-  <script type='text/javascript' src='http://www.google.com/jsapi'></script>
+<!-- <script type='text/javascript' src='http://www.google.com/jsapi'></script>
   <script type='text/javascript'>
     google.load('visualization', '1', {'packages':['annotatedtimeline']});
     google.setOnLoadCallback(drawChart);
@@ -25,6 +98,7 @@
         chart.draw(data, {displayAnnotations: true});
       }
   </script>
+-->
 </head>
 <body>
 
@@ -186,8 +260,12 @@ Idle: {{idle_cpus}} CPUs, {{format_mem(idle_mem)}} MEM<br />
   <p>No offers are active.</p>
 %end
 
-<h2>Cluster Utilization</h2>
-<div id='chart_div' style='width: 700px; height: 240px;'></div>
+<h2>Task History</h2>
+<!--div id='chart_div' style='width: 700px; height: 240px;'></div>-->
+<div id="tasks_table"></div>
+
+<h2>Framework History</h2>
+<div id="frameworks_table"></div>
 
 </body>
 </html>

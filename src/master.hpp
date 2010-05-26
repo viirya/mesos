@@ -16,6 +16,7 @@
 #include <reliable.hpp>
 
 #include <glog/logging.h>
+#include "event_history.hpp"
 
 #include <boost/lexical_cast.hpp>
 #include <boost/unordered_map.hpp>
@@ -264,6 +265,7 @@ enum TaskRemovalReason
 class Master : public Tuple<ReliableProcess>
 {
 protected:
+  EventLogger *evLogger;
   unordered_map<FrameworkID, Framework *> frameworks;
   unordered_map<SlaveID, Slave *> slaves;
   unordered_map<OfferID, SlotOffer *> slotOffers;

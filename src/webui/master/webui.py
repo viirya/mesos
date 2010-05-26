@@ -2,6 +2,8 @@ import bottle
 import commands
 import datetime
 import gviz_api
+import sqlite3
+import json
 
 from bottle import route, send_file, template, response
 
@@ -36,6 +38,76 @@ def log_tail(level, lines):
   bottle.response.content_type = 'text/plain'
   return commands.getoutput('tail -%s /tmp/nexus-master.%s' % (lines, level))
 
+#generate list of task history using JSON
+@route('/tasks_json')
+def tasks_json():
+  conn = sqlite3.connect('/Users/andyk/nexus-github/src/logs/event_history_db.sqlite3')
+  conn.row_factory = sqlite3.Row
+  c = conn.cursor()
+  c.execute("SELECT * FROM task;")
+  result = c.fetchall()
+  json_string = "{\"ResultSet\": {\"TotalItems\":" + str(len(result)) + ", \"Items\":[\n"
+  k = 0
+  for row in result:
+    k += 1
+    json_string += "\t\t{\n"
+    i = 0
+    for col in row.keys():
+      i += 1
+      if col == "resource_list":
+        json_string += "\t\t\"" + col + "\":" + str(row[col])
+      else:
+        json_string += "\t\t\"" + col + "\":\"" + str(row[col]) + "\""
+      if i != len(row.keys()):
+        json_string += ","
+      json_string += "\n"
+    json_string += "\t\t}"
+    if k != len(result):
+      json_string += ","
+    json_string += "\n"
+  json_string += "\t]}\n}"
+  response.header['Content-Type'] = 'text/plain' 
+  return str(json_string)
+
+#generate list of framework history using JSON
+@route('/frameworks_json')
+def frameworks_json():
+  conn = sqlite3.connect('/Users/andyk/nexus-github/src/logs/event_history_db.sqlite3')
+  conn.row_factory = sqlite3.Row
+  c = conn.cursor()
+  c.execute("SELECT * FROM framework;")
+  result = c.fetchall()
+  json_string = "{\"ResultSet\": {\"TotalItems\":" + str(len(result)) + ", \"Items\":[\n"
+  k = 0
+  for row in result:
+    k += 1
+    json_string += "\t\t{\n"
+    i = 0
+    for col in row.keys():
+      i += 1
+      json_string += "\t\t\"" + col + "\":\"" + str(row[col]) + "\""
+      if i != len(row.keys()):
+        json_string += ","
+      json_string += "\n"
+    json_string += "\t\t}"
+    if k != len(result):
+      json_string += ","
+    json_string += "\n"
+  json_string += "\t]}\n}"
+  response.header['Content-Type'] = 'text/plain' 
+  return str(json_string)
+
+
+#The following is for debug only
+#TODO(andyk):delete the following eventually
+@route('/test')
+def test():
+  json_string = "{\"ResultSet\": {\"TotalItems\":1, \"Items\":[{\"taskid\":\"0\"}]}}"
+  response.header['Content-Type'] = 'text/plain' 
+  return str(json_string)
+
+#The following is no longer used, was used for google api graphs, will break
+#TODO(andyk):delete the following eventually
 @route('/utilization_table')
 def utilization_table():
   description = [("datetime", "datetime", "datetime"),

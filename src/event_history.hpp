@@ -1,4 +1,8 @@
+#ifndef __EVENT_HISTORY_HPP__
+#define __EVENT_HISTORY_HPP__
+
 #include "nexus.hpp"
+//#include "nexus_types.hpp"
 #include "resources.hpp"
 #include <iostream>
 #include <string>
@@ -27,8 +31,10 @@ private:
 class EventWriter {
 public:
   virtual ~EventWriter() {}
+  virtual string getName() = 0;
   //virtual int logEvent(map<string,string> keyval_pairs) = 0;
-  virtual int createTask(TaskID, SlaveID, Resources) = 0;
+  virtual int logCreateTask(TaskID, SlaveID, Resources) = 0;
+  virtual int logCreateFramework(FrameworkID, string) = 0;
 };
 
 class FileEventWriter : public EventWriter {
@@ -36,10 +42,12 @@ private:
   ofstream logfile;
   time_t currTime;
 public:
+  string getName();
   FileEventWriter(); 
   ~FileEventWriter();
   //int logEvent(map<string,string> keyval_pairs);
-  int createTask(TaskID, SlaveID, Resources);
+  int logCreateTask(TaskID, SlaveID, Resources);
+  int logCreateFramework(FrameworkID, string);
 };
 
 class SqlLiteEventWriter : public EventWriter {
@@ -48,9 +56,11 @@ private:
   char *zErrMsg;
   time_t currTime;
 public:
+  string getName();
   SqlLiteEventWriter(); 
   ~SqlLiteEventWriter();
-  int createTask(TaskID, SlaveID, Resources);
+  int logCreateTask(TaskID, SlaveID, Resources);
+  int logCreateFramework(FrameworkID, string);
 };
 
 class EventLogger {
@@ -65,8 +75,12 @@ public:
   /*log arbitrary keyval pair */
   //int logEvent(int num_pairs, ...);
   /*semantic logging statements */
-  int createTask(TaskID, SlaveID, Resources);
+  int logResourceOffer(FrameworkID, Resources);
+  int logCreateTask(TaskID, SlaveID, Resources);
+  int logCreateFramework(FrameworkID, string);
   //int updateTaskStatus(TaskID, TaskStatus); 
   void writeEvent();
   EventLogger operator() (string, string);
 };
+
+#endif /* __EVENT_HISTORY_HPP__ */

@@ -8,6 +8,7 @@
 
 //#include <glog/logging.h>
 
+//returns the current time in microseconds
 long getTimeStamp(){
   struct timeval curr_time;
   struct timezone tzp;
@@ -15,11 +16,19 @@ long getTimeStamp(){
   return (long)(curr_time.tv_sec * 1000000 + curr_time.tv_usec);
 }
 
+//returns a human readable timestamp
+string getHumanReadableTimeStamp(){
+  time_t currTime; /* calendar time */
+  currTime=time(NULL); /* get current cal time */
+  string timestamp = asctime(localtime(&currTime));
+  return timestamp.erase(24); /* chop off the newline */
+}
+
 //////////Event/////////
 Event::Event(string s1 = "", string s2 = "") {
-if (s1.compare("") != 0 && s2.compare("") != 0) {
-addAttribute(s1,s2);
-}
+  if (s1.compare("") != 0 && s2.compare("") != 0) {
+    addAttribute(s1,s2);
+  }
 }
 
 void Event::addAttribute(string s1, string s2) {
@@ -29,7 +38,6 @@ void Event::addAttribute(string s1, string s2) {
 
 //////////FileEventWriter/////////
 FileEventWriter::FileEventWriter() {
-  time_t currTime; /* calendar time */
   //if log dir doesn't exist, create it
   struct stat sb;
   if (stat("logs", &sb) == -1) {
@@ -45,17 +53,17 @@ FileEventWriter::FileEventWriter() {
   cout << "opened log file" << endl;
 }
 
+string FileEventWriter::getName() {
+  return "File Event Writer";
+}
+
 FileEventWriter::~FileEventWriter() {
   logfile.close();
   cout << "closed log file" << endl;
 }
 
 /*int FileEventWriter::logEvent(map<string,string> keyval_pairs) {
-  //print curr timestamp
-  currTime=time(NULL); // get current cal time
-  string timestamp = asctime(localtime(&currTime));
-  timestamp.erase(24); // chop off the newline
-  logfile << timestamp << ",";
+  logfile << getHumanReadableTimestamp() << ",";
 
   map<string,string>::iterator it;
   for (it=keyval_pairs.begin(); it != keyval_pairs.end(); it++) {
@@ -76,12 +84,17 @@ FileEventWriter::~FileEventWriter() {
 }
 */
 
-int FileEventWriter::createTask(TaskID tid, SlaveID sid, Resources resVec) {
-  currTime=time(NULL); /* get current cal time */
-  string timestamp = asctime(localtime(&currTime));
-  timestamp.erase(24); /* chop off the newline */
-  logfile << timestamp << "," << tid << "," << sid << ",";;
-  logfile << "createTask" << "," << resVec.cpus << "," << resVec.mem << "\n";
+int FileEventWriter::logCreateTask(TaskID tid, SlaveID sid, Resources resVec) {
+  logfile << getHumanReadableTimeStamp() << ",CreateTask" << "," << tid << "," << sid << ",";
+  logfile << resVec.cpus << "," << resVec.mem << "\n";
+
+  logfile.flush();
+  return 0;
+}
+
+int FileEventWriter::logCreateFramework(FrameworkID fwid, string user) {
+  logfile << getHumanReadableTimeStamp() << "," << "CreateFramework" << ",";
+  logfile << fwid << "," << user << "\n";
 
   logfile.flush();
   return 0;
@@ -98,9 +111,12 @@ static int callback(void *NotUsed, int argc, char **argv, char **azColName){
   return 0;
 }
 
+string SqlLiteEventWriter::getName(){
+  return "Sqlite Event Writer";
+}
+
 SqlLiteEventWriter::SqlLiteEventWriter() {
   zErrMsg = 0;
-  time_t currTime; /* calendar time */
   //if log dir doesn't exist, create it
   struct stat sb;
   if (stat("logs", &sb) == -1) {
@@ -112,7 +128,7 @@ SqlLiteEventWriter::SqlLiteEventWriter() {
     }
   }
   //set up log file in log dir
-  int rc = sqlite3_open("logs/event_history_db",&db);
+  int rc = sqlite3_open("logs/event_history_db.sqlite3",&db);
   if( rc ) {
     cerr << "ERROR: Can't open database: " << sqlite3_errmsg(db) << endl;
     sqlite3_close(db);
@@ -123,6 +139,7 @@ SqlLiteEventWriter::SqlLiteEventWriter() {
   //create task table in case it doesn't already exist,
   //if it does this shouldn't destroy it
   sqlite3_exec(db, "CREATE TABLE task (taskid Varchar(255), fwid Varchar(255), date_created integer, resource_list Varchar(255))", ::callback, 0, &zErrMsg);
+  sqlite3_exec(db, "CREATE TABLE framework (fwid Varchar(255), user Varchar(255), date_created integer)", ::callback, 0, &zErrMsg);
 }
 
 SqlLiteEventWriter::~SqlLiteEventWriter() {
@@ -130,17 +147,29 @@ SqlLiteEventWriter::~SqlLiteEventWriter() {
   cout << "closed sqllite db" << endl;
 }
 
-int SqlLiteEventWriter::createTask(TaskID tid, SlaveID sid, Resources resVec) {
-  currTime=time(NULL); /* get current cal time */
-  string timestamp = asctime(localtime(&currTime));
-  timestamp.erase(24); /* chop off the newline */
+int SqlLiteEventWriter::logCreateTask(TaskID tid, SlaveID sid, Resources resVec) {
   stringstream ss;
   ss << "INSERT INTO task VALUES (";
-  ss << tid << ",";
-  ss << sid << ",";
+  ss << "\"" << tid << "\"" << ",";
+  ss << "\"" << sid << "\"" << ",";
   ss << getTimeStamp() << ",";
-  ss << "'{\"cpus\":" << resVec.cpus << ",\"mem\":" << resVec.mem << "}'";
+  ss << "'{";
+    ss << "\"cpus\":\"" << resVec.cpus << "\",";
+    ss << "\"mem\":\"" << resVec.mem << "\"";
+  ss << "}'";
   ss << ")" << endl;
+  cout << "executing " << ss.str() << endl;
+  sqlite3_exec(db, ss.str().c_str(), callback, 0, &zErrMsg); 
+
+  return 0;
+}
+
+int SqlLiteEventWriter::logCreateFramework(FrameworkID fwid, string user) {
+  stringstream ss;
+  ss << "INSERT INTO framework VALUES (";
+  ss << "\"" << fwid << "\"" << ",";
+  ss << "\"" << user << "\"" << ",";
+  ss << getTimeStamp() << ")" << endl;
   cout << "executing " << ss.str() << endl;
   sqlite3_exec(db, ss.str().c_str(), callback, 0, &zErrMsg); 
 
@@ -152,8 +181,7 @@ EventLogger::EventLogger() {
   Event event();
   logOnDestroy = false;
   cout << "creating FileEventWriter" << endl;
-  FileEventWriter* fhl = new FileEventWriter();
-  writers.push_back(fhl);
+  writers.push_front(new FileEventWriter());
   writers.push_front(new SqlLiteEventWriter);
 }
 
@@ -164,8 +192,11 @@ EventLogger::~EventLogger() {
   }
   cout << ", cleaning up EventWriters" << endl;
   cout << "num of loggers in list: " << writers.size() << endl;
-  EventWriter* fhl = writers.front();
-  delete fhl;
+  //delete all eventWriters in list
+  list<EventWriter*>::iterator it;
+  for (it = writers.begin(); it != writers.end(); it++) {
+    delete *it;
+  } 
   cout << "num of loggers in list: " << writers.size() << endl;
 }
 
@@ -177,13 +208,35 @@ void EventLogger::writeEvent() {
   //This should loop through all writers in list and send event to each one
 }
 
-EventLogger EventLogger::operator() (string s1, string s2) {
+//todo(andyk): exp
+/*EventLogger EventLogger::operator() (string s1, string s2) {
   event.addAttribute(s1, s2);
   cout << "added attribute ( " << s1 << ", " << s2 << ") to event" << endl;
   EventLogger el(*this);
   el.setLogOnDestroy(true);
   return el;
+}*/
+
+
+int EventLogger::logCreateTask(TaskID tid, SlaveID sid, Resources resVec) {
+  list<EventWriter*>::iterator it;
+  for (it = writers.begin(); it != writers.end(); it++) {
+    (*it)->logCreateTask(tid, sid, resVec);
+    cout << "logged CreateTask event with " << (*it)->getName() << endl;
+  } 
 }
+
+//TODO:logUpdateTaskStatus()
+
+int EventLogger::logCreateFramework(FrameworkID fwid, string user) {
+  list<EventWriter*>::iterator it;
+  for (it = writers.begin(); it != writers.end(); it++) {
+    (*it)->logCreateFramework(fwid, user);
+    cout << "logged CreateFramework event with " << (*it)->getName() << ". fwid: " << fwid << ", user: " << user << endl;
+  }
+}
+
+//TODO:logUpdateFrameworkStatus()
 
 /*int EventLogger::logEvent(int num_pairs, ...) {
   va_list args;
@@ -202,12 +255,6 @@ EventLogger EventLogger::operator() (string s1, string s2) {
   va_end(args);
 }
 */
-
-int EventLogger::createTask(TaskID tid, SlaveID sid, Resources resVec) {
-  EventWriter* fhl = writers.front();
-  fhl->createTask(tid, sid, resVec);
-  cout << "logged createTask event in file event writer, tid: " << tid << endl;
-}
 
 //int main(int args, char** argv) {
 //  EventLogger evLogger = EventLogger();
