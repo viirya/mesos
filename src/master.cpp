@@ -4,6 +4,10 @@
 #include "allocator_factory.hpp"
 #include "master.hpp"
 #include "master_webui.hpp"
+#include <iostream>
+
+#include "event_history.hpp"
+
 
 using std::endl;
 using std::max;
@@ -747,6 +751,24 @@ void Master::processOfferReply(SlotOffer *offer,
       return;    
     }
     idsInResponse.insert(t.taskId);
+  }
+
+  //Record the resources in event_history
+  //TODO: first record them when offer is made then, update them here
+  EventLogger evLogger = EventLogger();
+  foreachpair (Slave *s, Resources& respRes, responseResources) {
+    Resources &offRes = offerResources[s];
+    stringstream ss;//create a stringstream
+    ss << framework;//add number to the stream
+    string frameworkIDStr = ss.str();
+
+    ss << respRes.cpus;
+    string cpusStr = ss.str();
+
+    ss << respRes.mem;
+    string memStr = ss.str();
+
+    evLogger.logEvent(4, "event-type", "offer-accepted", "frameworkID", frameworkIDStr.c_str(), "cpus", cpusStr.c_str(), "mem", memStr.c_str());
   }
 
   // Launch the tasks in the response
