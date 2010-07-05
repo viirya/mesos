@@ -2,7 +2,6 @@
 #define __EVENT_HISTORY_HPP__
 
 #include "nexus.hpp"
-//#include "nexus_types.hpp"
 #include "resources.hpp"
 #include <iostream>
 #include <string>
@@ -13,8 +12,12 @@
 #include <sqlite3.h>
 
 using namespace std;
-using namespace nexus;
-using namespace nexus::internal;
+using nexus::FrameworkID;
+using nexus::TaskID;
+using nexus::SlaveID;
+using nexus::FrameworkID;
+using nexus::TaskStatus;
+using nexus::internal::Resources;
 
 class Event {
 public:

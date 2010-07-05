@@ -1,13 +1,14 @@
 import bottle
 import commands
 import datetime
-import gviz_api
 import sqlite3
 import json
+import os
 
 from bottle import route, send_file, template, response
 
 start_time = datetime.datetime.now()
+database_location = os.getcwd() + '/logs/event_history_db.sqlite3'
 
 
 @route('/')
@@ -41,7 +42,10 @@ def log_tail(level, lines):
 #generate list of task history using JSON
 @route('/tasks_json')
 def tasks_json():
-  conn = sqlite3.connect('/Users/andyk/nexus-github/src/logs/event_history_db.sqlite3')
+  try:
+    conn = sqlite3.connect(database_location)
+  except:
+    return "Error opening database at " + database_location
   conn.row_factory = sqlite3.Row
   c = conn.cursor()
   c.execute("SELECT * FROM task;")
@@ -72,7 +76,10 @@ def tasks_json():
 #generate list of framework history using JSON
 @route('/frameworks_json')
 def frameworks_json():
-  conn = sqlite3.connect('/Users/andyk/nexus-github/src/logs/event_history_db.sqlite3')
+  try:
+    conn = sqlite3.connect(database_location) 
+  except:
+    return "Error opening database at " + database_location
   conn.row_factory = sqlite3.Row
   c = conn.cursor()
   c.execute("SELECT * FROM framework;")

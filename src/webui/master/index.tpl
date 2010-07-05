@@ -7,17 +7,32 @@
 <html>
 <head>
 <title>Nexus Master on {{HOSTNAME}}</title>
+<style type="text/css">
+#yui-history-iframe {
+  position:absolute;
+  top:0; left:0;
+  width:1px; height:1px; /* avoid scrollbars */
+  visibility:hidden;
+}
+</style>
 <!-- Combo-handled YUI CSS files: -->
-<link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/combo?2.8.1/build/paginator/assets/skins/sam/paginator.css&2.8.1/build/datatable/assets/skins/sam/datatable.css&2.8.1/build/logger/assets/skins/sam/logger.css">
+<link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/combo?2.8.1/build/paginator/assets/skins/sam/paginator.css&2.8.1/build/datatable/assets/skins/sam/datatable.css">
 <!-- Combo-handled YUI JS files: -->
-<script type="text/javascript" src="http://yui.yahooapis.com/combo?2.8.1/build/yahoo/yahoo-debug.js&2.8.1/build/event/event-debug.js&2.8.1/build/connection/connection-debug.js&2.8.1/build/dom/dom-debug.js&2.8.1/build/element/element-debug.js&2.8.1/build/paginator/paginator-debug.js&2.8.1/build/datasource/datasource-debug.js&2.8.1/build/datatable/datatable-debug.js&2.8.1/build/json/json-debug.js&2.8.1/build/logger/logger-debug.js"></script>
+<script type="text/javascript" src="http://yui.yahooapis.com/combo?2.8.1/build/yahoo-dom-event/yahoo-dom-event.js&2.8.1/build/connection/connection-min.js&2.8.1/build/datasource/datasource-min.js&2.8.1/build/element/element-min.js&2.8.1/build/paginator/paginator-min.js&2.8.1/build/datatable/datatable-min.js&2.8.1/build/history/history-min.js&2.8.1/build/json/json-min.js"></script>
 
 <script type='text/javascript'>
 //Copied from http://developer.yahoo.com/yui/examples/datatable/dt_xhrjson.html
 
+// Custom parser 
+var timestampToDate = function(sTimestamp) { 
+    //convert from microseconds to milliseconds
+    return new Date(sTimestamp/1000); 
+}; 
+
 //SETUP TASKS TABLE
 YAHOO.util.Event.addListener(window, "load", function() {
   YAHOO.example.XHR_JSON = new function() {
+    // Define columns
     var myColumnDefs = [
         {key:"taskid", label:"Task ID", sortable:true},
         {key:"fwid", label:"FW ID", sortable:true},
@@ -26,16 +41,34 @@ YAHOO.util.Event.addListener(window, "load", function() {
         {key:"resource_list.mem", label:"Memory(MB)", sortable:true, formatter:YAHOO.widget.DataTable.formatNumber}
     ];
 
-    this.tasksDataSource = new YAHOO.util.DataSource("tasks_json");
-    this.tasksDataSource.responseType = YAHOO.util.DataSource.TYPE_JSON;
-    this.tasksDataSource.connXhrMode = "queueRequests";
-    this.tasksDataSource.responseSchema = {
+    // DataSource instance
+    myTasksDataSource = new YAHOO.util.DataSource("tasks_json");
+    myTasksDataSource.responseType = YAHOO.util.DataSource.TYPE_JSON;
+    myTasksDataSource.connXhrMode = "queueRequests";
+    myTasksDataSource.responseSchema = {
         resultsList: "ResultSet.Items",
-        fields: ["taskid","fwid",{key:"date_created",parser:"date"},{key:"resource_list.cpus",parser:"number"},{key:"resource_list.mem",parser:"number"}]
+        fields: ["taskid",
+                 "fwid",
+                 {key:"date_created",parser:timestampToDate},
+                 {key:"resource_list.cpus",parser:"number"},
+                 {key:"resource_list.mem",parser:"number"}]
     };
 
-    this.myDataTable = new YAHOO.widget.DataTable("tasks_table", myColumnDefs,
-            this.tasksDataSource);
+    // DataTable configurations
+    var myConfig = {
+      // Create the Paginator
+       paginator: new YAHOO.widget.Paginator({
+          template : "{PreviousPageLink} {CurrentPageReport} {NextPageLink} {RowsPerPageDropdown}",
+          pageReportTemplate : "Showing items {startIndex} - {endIndex} of {totalRecords}",
+          rowsPerPage: 20,
+          rowsPerPageOptions: [20,50,100,200,500]
+      })
+    }; 
+
+    // Instantiate DataTable
+    var myDataTable = new YAHOO.widget.DataTable("tasks_table", myColumnDefs,
+            myTasksDataSource, myConfig);
+
   };
 });
 
@@ -45,35 +78,31 @@ YAHOO.util.Event.addListener(window, "load", function() {
     var myColumnDefs = [
         {key:"fwid", label:"FW ID", sortable:true},
         {key:"user", label:"User", sortable:true},
-        {key:"date_created", label:"Date-time created", sortable:true, formatter:YAHOO.widget.DataTable.formatDate} 
+        {key:"date_created", label:"Date", sortable:true, formatter:"date"} 
     ];
-
-    this.fwDataSource = new YAHOO.util.DataSource("frameworks_json");
-    this.fwDataSource.responseType = YAHOO.util.DataSource.TYPE_JSON;
-    this.fwDataSource.connXhrMode = "queueRequests";
-    this.fwDataSource.responseSchema = {
+     
+    // DataSource instance
+    myFwDataSource = new YAHOO.util.DataSource("frameworks_json");
+    myFwDataSource.responseType = YAHOO.util.DataSource.TYPE_JSON;
+    myFwDataSource.connXhrMode = "queueRequests";
+    myFwDataSource.responseSchema = {
         resultsList: "ResultSet.Items",
-        fields: ["fwid","user",{key:"date_created",parser:"date"}]
+        fields: ["fwid","user",{key:"date_created",parser:timestampToDate}]
     };
+
+    // DataTable configurations
+    var myConfig = {
+      // Create the Paginator
+      paginator: new YAHOO.widget.Paginator({
+          template : "{PreviousPageLink} {CurrentPageReport} {NextPageLink} {RowsPerPageDropdown}",
+          pageReportTemplate : "Showing items {startIndex} - {endIndex} of {totalRecords}",
+          rowsPerPage: 20,
+          rowsPerPageOptions: [20,50,100,200,500]
+      })
+    }; 
 
     this.myDataTable = new YAHOO.widget.DataTable("frameworks_table",
-             myColumnDefs, this.fwDataSource);
-/*
-    var myColumnDefs = [
-        {key:"taskid"}//, sortable:true}
-    ];
-
-    this.myDataSource = new YAHOO.util.DataSource("test");
-    this.myDataSource.responseType = YAHOO.util.DataSource.TYPE_JSON;
-    //this.myDataSource.connXhrMode = "queueRequests";
-    this.myDataSource.responseSchema = {
-        resultsList: "ResultSet.Items",
-        fields: ["taskid"]
-    };
-
-    this.myDataTable = new YAHOO.widget.DataTable("json", myColumnDefs,
-                this.myDataSource);
-*/
+             myColumnDefs, myFwDataSource, myConfig);
   };
 });
 </script>
