@@ -36,7 +36,7 @@ public:
   virtual ~EventWriter() {}
   virtual string getName() = 0;
   //virtual int logEvent(map<string,string> keyval_pairs) = 0;
-  virtual int logCreateTask(TaskID, SlaveID, Resources) = 0;
+  virtual int logCreateTask(TaskID, FrameworkID, SlaveID, Resources) = 0;
   virtual int logCreateFramework(FrameworkID, string) = 0;
 };
 
@@ -49,7 +49,7 @@ public:
   FileEventWriter(); 
   ~FileEventWriter();
   //int logEvent(map<string,string> keyval_pairs);
-  int logCreateTask(TaskID, SlaveID, Resources);
+  int logCreateTask(TaskID, FrameworkID, SlaveID, Resources);
   int logCreateFramework(FrameworkID, string);
 };
 
@@ -62,7 +62,7 @@ public:
   string getName();
   SqlLiteEventWriter(); 
   ~SqlLiteEventWriter();
-  int logCreateTask(TaskID, SlaveID, Resources);
+  int logCreateTask(TaskID, FrameworkID, SlaveID, Resources);
   int logCreateFramework(FrameworkID, string);
 };
 
@@ -79,7 +79,7 @@ public:
   //int logEvent(int num_pairs, ...);
   /*semantic logging statements */
   int logResourceOffer(FrameworkID, Resources);
-  int logCreateTask(TaskID, SlaveID, Resources);
+  int logCreateTask(TaskID, FrameworkID, SlaveID, Resources);
   int logCreateFramework(FrameworkID, string);
   //int updateTaskStatus(TaskID, TaskStatus); 
   void writeEvent();

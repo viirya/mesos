@@ -17,10 +17,10 @@ def index():
   return template("index", start_time = start_time)
 
 
-@route('/framework/:id#[0-9]*#')
+@route('/framework/:id#[0-9]*\-[0-9]*#')
 def framework(id):
   bottle.TEMPLATES.clear() # For rapid development
-  return template("framework", framework_id = int(id))
+  return template("framework", framework_id = id)
 
 
 @route('/static/:filename#.*#')
@@ -103,7 +103,6 @@ def frameworks_json():
   json_string += "\t]}\n}"
   response.header['Content-Type'] = 'text/plain' 
   return str(json_string)
-
 
 #The following is for debug only
 #TODO(andyk):delete the following eventually

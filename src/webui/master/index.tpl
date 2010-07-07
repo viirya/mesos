@@ -36,7 +36,7 @@ YAHOO.util.Event.addListener(window, "load", function() {
     var myColumnDefs = [
         {key:"taskid", label:"Task ID", sortable:true},
         {key:"fwid", label:"FW ID", sortable:true},
-        {key:"date_created", label:"Date-time created", sortable:true, formatter:YAHOO.widget.DataTable.formatDate}, 
+        {key:"datetime_created", label:"Date-time created", sortable:true, formatter:YAHOO.widget.DataTable.formatDate}, 
         {key:"resource_list.cpus", label:"Num Cores", sortable:true, formatter:YAHOO.widget.DataTable.formatNumber},
         {key:"resource_list.mem", label:"Memory(MB)", sortable:true, formatter:YAHOO.widget.DataTable.formatNumber}
     ];
@@ -49,7 +49,7 @@ YAHOO.util.Event.addListener(window, "load", function() {
         resultsList: "ResultSet.Items",
         fields: ["taskid",
                  "fwid",
-                 {key:"date_created",parser:timestampToDate},
+                 {key:"datetime_created",parser:timestampToDate},
                  {key:"resource_list.cpus",parser:"number"},
                  {key:"resource_list.mem",parser:"number"}]
     };
@@ -78,7 +78,7 @@ YAHOO.util.Event.addListener(window, "load", function() {
     var myColumnDefs = [
         {key:"fwid", label:"FW ID", sortable:true},
         {key:"user", label:"User", sortable:true},
-        {key:"date_created", label:"Date", sortable:true, formatter:"date"} 
+        {key:"datetime_created", label:"Date", sortable:true, formatter:"date"} 
     ];
      
     // DataSource instance
@@ -87,7 +87,7 @@ YAHOO.util.Event.addListener(window, "load", function() {
     myFwDataSource.connXhrMode = "queueRequests";
     myFwDataSource.responseSchema = {
         resultsList: "ResultSet.Items",
-        fields: ["fwid","user",{key:"date_created",parser:timestampToDate}]
+        fields: ["fwid","user",{key:"datetime_created",parser:timestampToDate}]
     };
 
     // DataTable configurations

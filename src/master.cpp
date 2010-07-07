@@ -4,7 +4,6 @@
 #include "allocator_factory.hpp"
 #include "master.hpp"
 #include "master_webui.hpp"
-#include <iostream>
 #include <sys/time.h>
 
 #include "event_history.hpp"
@@ -752,24 +751,12 @@ void Master::processOfferReply(SlotOffer *offer,
 
 
   foreach (const TaskDescription &t, tasks) {
-    // Record the resources in event_history and then
+    // Record the resources in event_history
     Params params(t.params);
     Resources res(params.getInt32("cpus", -1),
                   params.getInt64("mem", -1));
 
-    //construct fw id and resource strings
-    stringstream ss;
-
-    ss << framework;
-    string frameworkIDStr = ss.str();
-    ss << res.cpus;
-    string cpusStr = ss.str();
-    ss << res.mem;
-    string memStr = ss.str();
-
-    //evLogger->logEvent(4, "event-type", "offer-accepted", "frameworkID", frameworkIDStr.c_str(), "cpus", cpusStr.c_str(), "mem", memStr.c_str());
-
-    evLogger->logCreateTask(t.taskId, t.slaveId, res);
+    evLogger->logCreateTask(t.taskId, framework->id, t.slaveId, res);
 
     // Launch the tasks in the response
     launchTask(framework, t);
