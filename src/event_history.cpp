@@ -86,7 +86,7 @@ FileEventWriter::~FileEventWriter() {
 
 int FileEventWriter::logCreateTask(TaskID tid, FrameworkID fwid, SlaveID sid, Resources resVec) {
   logfile << getHumanReadableTimeStamp() << ",CreateTask" << ", taskid: " << tid << ", fwid: " << fwid << ", sid: " << sid << ",";
-  logfile << resVec.cpus << "," << resVec.mem << "\n";
+  logfile << "cpus: " << resVec.cpus << ", mem: " << resVec.mem << "\n";
 
   logfile.flush();
   return 0;
@@ -94,7 +94,7 @@ int FileEventWriter::logCreateTask(TaskID tid, FrameworkID fwid, SlaveID sid, Re
 
 int FileEventWriter::logCreateFramework(FrameworkID fwid, string user) {
   logfile << getHumanReadableTimeStamp() << "," << "CreateFramework" << ",";
-  logfile << fwid << "," << user << "\n";
+  logfile << "fwid: " << fwid << ", userid: " << user << "\n";
 
   logfile.flush();
   return 0;
@@ -138,7 +138,7 @@ SqlLiteEventWriter::SqlLiteEventWriter() {
   }
   //create task table in case it doesn't already exist,
   //if it does this shouldn't destroy it
-  sqlite3_exec(db, "CREATE TABLE task (taskid Varchar(255), fwid Varchar(255), datetime_created integer, resource_list Varchar(255))", ::callback, 0, &zErrMsg);
+  sqlite3_exec(db, "CREATE TABLE task (taskid Varchar(255), fwid Varchar(255), sid Varchar(255), datetime_created integer, resource_list Varchar(255))", ::callback, 0, &zErrMsg);
   sqlite3_exec(db, "CREATE TABLE taskstatus (taskid Varchar(255), fwid Varchar(255), datetime_updated integer)", ::callback, 0, &zErrMsg);
 
   sqlite3_exec(db, "CREATE TABLE framework (fwid Varchar(255), user Varchar(255), datetime_created integer)", ::callback, 0, &zErrMsg);

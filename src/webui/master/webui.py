@@ -5,7 +5,7 @@ import sqlite3
 import json
 import os
 
-from bottle import route, send_file, template, response
+from bottle import route, send_file, template, response, request
 
 start_time = datetime.datetime.now()
 database_location = os.getcwd() + '/logs/event_history_db.sqlite3'
@@ -42,13 +42,15 @@ def log_tail(level, lines):
 #generate list of task history using JSON
 @route('/tasks_json')
 def tasks_json():
+  fwid = request.GET.get('fwid', '').strip()
   try:
     conn = sqlite3.connect(database_location)
   except:
     return "Error opening database at " + database_location
   conn.row_factory = sqlite3.Row
   c = conn.cursor()
-  c.execute("SELECT * FROM task;")
+  #TODO(andyk): prevent SQL injection! This is probably dangerous!
+  c.execute("SELECT * FROM task WHERE fwid = \"" + fwid + "\";")
   result = c.fetchall()
   json_string = "{\"ResultSet\": {\"TotalItems\":" + str(len(result)) + ", \"Items\":[\n"
   k = 0

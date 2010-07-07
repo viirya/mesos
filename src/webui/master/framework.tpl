@@ -6,6 +6,80 @@
 <html>
 <head>
 <title>Framework {{framework_id}} on {{HOSTNAME}}</title>
+<!-- Combo-handled YUI CSS files: -->
+<link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/combo?2.8.1/build/paginator/assets/skins/sam/paginator.css&2.8.1/build/datatable/assets/skins/sam/datatable.css">
+<!-- Combo-handled YUI JS files: -->
+<script type="text/javascript" src="http://yui.yahooapis.com/combo?2.8.1/build/yahoo-dom-event/yahoo-dom-event.js&2.8.1/build/connection/connection-min.js&2.8.1/build/datasource/datasource-min.js&2.8.1/build/element/element-min.js&2.8.1/build/paginator/paginator-min.js&2.8.1/build/datatable/datatable-min.js&2.8.1/build/history/history-min.js&2.8.1/build/json/json-min.js"></script>
+
+<script type='text/javascript'>
+//Copied from http://developer.yahoo.com/yui/examples/datatable/dt_xhrjson.html
+
+// Custom parser 
+var timestampToDate = function(sTimestamp) { 
+    //convert from microseconds to milliseconds
+    return new Date(sTimestamp/1000); 
+}; 
+
+var frameworkToURL = function(fwName) {
+   return "http://www.andykonwinski.com"; 
+};
+
+//SETUP TASKS TABLE
+YAHOO.util.Event.addListener(window, "load", function() {
+  YAHOO.example.XHR_JSON = new function() {
+
+    // Define columns
+    var myColumnDefs = [
+        {key:"taskid", label:"Task ID", sortable:true},
+        {key:"fwid", label:"FW ID", sortable:true},
+        {key:"datetime_created", label:"Date-time created", sortable:true, formatter:YAHOO.widget.DataTable.formatDate}, 
+        {key:"resource_list.cpus", label:"Num Cores", sortable:true, formatter:YAHOO.widget.DataTable.formatNumber},
+        {key:"resource_list.mem", label:"Memory(MB)", sortable:true, formatter:YAHOO.widget.DataTable.formatNumber}
+    ];
+
+    // DataSource instance
+    myTasksDataSource = new YAHOO.util.DataSource("../tasks_json?");
+    myTasksDataSource.responseType = YAHOO.util.DataSource.TYPE_JSON;
+    myTasksDataSource.connXhrMode = "queueRequests";
+    myTasksDataSource.responseSchema = {
+        resultsList: "ResultSet.Items",
+        fields: ["taskid",
+                 "fwid",
+                 {key:"datetime_created",parser:timestampToDate},
+                 {key:"resource_list.cpus",parser:"number"},
+                 {key:"resource_list.mem",parser:"number"}]
+    };
+
+    // A custom function to translate the js paging request into a query
+    // string sent to the XHR DataSource
+    var buildQueryString = function (state,dt) {
+        return "startIndex=" + state.pagination.recordOffset +
+               "&results=" + state.pagination.rowsPerPage +
+               "&fwid=" + {{framework_id}};
+    };
+
+    // DataTable configurations
+    var myConfig = {
+      // Create the Paginator
+       paginator: new YAHOO.widget.Paginator({
+          template : "{PreviousPageLink} {CurrentPageReport} {NextPageLink} {RowsPerPageDropdown}",
+          pageReportTemplate : "Showing items {startIndex} - {endIndex} of {totalRecords}",
+          rowsPerPage: 20,
+          rowsPerPageOptions: [20,50,100,200,500]
+      }),
+      initialRequest: 'startIndex=0&results=20&fwid={{framework_id}}',
+      generateRequest: buildQueryString
+    }; 
+
+    // Instantiate DataTable
+    var myDataTable = new YAHOO.widget.DataTable("tasks_table", myColumnDefs,
+            myTasksDataSource, myConfig);
+
+  };
+});
+
+</script>
+
 <link rel="stylesheet" type="text/css" href="/static/stylesheet.css" />
 </head>
 <body>
@@ -37,7 +111,7 @@
   MEM: {{format_mem(framework.mem)}}<br />
   </p>
 
-  <h2>Tasks</h2>
+  <h2>Running Tasks</h2>
 
   %# TODO: sort these by task id
   %if framework.tasks.size() > 0:
@@ -63,12 +137,18 @@
       </tr>
     %end
     </table>
+
   %else:
     <p>No tasks are running.</p>
   %end
 %else:
   <p>No framework with ID {{framework_id}} is connected.</p>
 %end
+
+
+  <h2>Task History</h2>
+  <!--div id='chart_div' style='width: 700px; height: 240px;'></div>-->
+  <div id="tasks_table"></div>
 
 <p><a href="/">Back to Master</a></p>
 

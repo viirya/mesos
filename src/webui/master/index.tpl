@@ -7,14 +7,6 @@
 <html>
 <head>
 <title>Nexus Master on {{HOSTNAME}}</title>
-<style type="text/css">
-#yui-history-iframe {
-  position:absolute;
-  top:0; left:0;
-  width:1px; height:1px; /* avoid scrollbars */
-  visibility:hidden;
-}
-</style>
 <!-- Combo-handled YUI CSS files: -->
 <link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/combo?2.8.1/build/paginator/assets/skins/sam/paginator.css&2.8.1/build/datatable/assets/skins/sam/datatable.css">
 <!-- Combo-handled YUI JS files: -->
@@ -29,54 +21,18 @@ var timestampToDate = function(sTimestamp) {
     return new Date(sTimestamp/1000); 
 }; 
 
-//SETUP TASKS TABLE
-YAHOO.util.Event.addListener(window, "load", function() {
-  YAHOO.example.XHR_JSON = new function() {
-    // Define columns
-    var myColumnDefs = [
-        {key:"taskid", label:"Task ID", sortable:true},
-        {key:"fwid", label:"FW ID", sortable:true},
-        {key:"datetime_created", label:"Date-time created", sortable:true, formatter:YAHOO.widget.DataTable.formatDate}, 
-        {key:"resource_list.cpus", label:"Num Cores", sortable:true, formatter:YAHOO.widget.DataTable.formatNumber},
-        {key:"resource_list.mem", label:"Memory(MB)", sortable:true, formatter:YAHOO.widget.DataTable.formatNumber}
-    ];
-
-    // DataSource instance
-    myTasksDataSource = new YAHOO.util.DataSource("tasks_json");
-    myTasksDataSource.responseType = YAHOO.util.DataSource.TYPE_JSON;
-    myTasksDataSource.connXhrMode = "queueRequests";
-    myTasksDataSource.responseSchema = {
-        resultsList: "ResultSet.Items",
-        fields: ["taskid",
-                 "fwid",
-                 {key:"datetime_created",parser:timestampToDate},
-                 {key:"resource_list.cpus",parser:"number"},
-                 {key:"resource_list.mem",parser:"number"}]
-    };
-
-    // DataTable configurations
-    var myConfig = {
-      // Create the Paginator
-       paginator: new YAHOO.widget.Paginator({
-          template : "{PreviousPageLink} {CurrentPageReport} {NextPageLink} {RowsPerPageDropdown}",
-          pageReportTemplate : "Showing items {startIndex} - {endIndex} of {totalRecords}",
-          rowsPerPage: 20,
-          rowsPerPageOptions: [20,50,100,200,500]
-      })
-    }; 
-
-    // Instantiate DataTable
-    var myDataTable = new YAHOO.widget.DataTable("tasks_table", myColumnDefs,
-            myTasksDataSource, myConfig);
-
-  };
-});
-
 //SETUP FRAMEWORKS TABLE
 YAHOO.util.Event.addListener(window, "load", function() {
   YAHOO.example.XHR_JSON = new function() {
+
+    // Override the built-in formatter
+    YAHOO.widget.DataTable.formatLink = function(elLiner, oRecord, oColumn, oData) {
+       var fwid = oData;
+       elLiner.innerHTML = "<a href=\"framework/" + fwid + "\">" + fwid + "</a>";
+    };
+
     var myColumnDefs = [
-        {key:"fwid", label:"FW ID", sortable:true},
+        {key:"fwid", label:"FW ID", sortable:true, formatter:YAHOO.widget.DataTable.formatLink},
         {key:"user", label:"User", sortable:true},
         {key:"datetime_created", label:"Date", sortable:true, formatter:"date"} 
     ];
@@ -106,8 +62,6 @@ YAHOO.util.Event.addListener(window, "load", function() {
   };
 });
 </script>
-
-
 
 <link rel="stylesheet" type="text/css" href="/static/stylesheet.css" />
 <!-- <script type='text/javascript' src='http://www.google.com/jsapi'></script>
@@ -288,10 +242,6 @@ Idle: {{idle_cpus}} CPUs, {{format_mem(idle_mem)}} MEM<br />
 %else:
   <p>No offers are active.</p>
 %end
-
-<h2>Task History</h2>
-<!--div id='chart_div' style='width: 700px; height: 240px;'></div>-->
-<div id="tasks_table"></div>
 
 <h2>Framework History</h2>
 <div id="frameworks_table"></div>
