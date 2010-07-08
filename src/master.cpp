@@ -308,7 +308,7 @@ void Master::operator () ()
 				     framework->user,
 				     framework->executorInfo);
       LOG(INFO) << "Registering " << framework << " at " << framework->pid;
-      evLogger->logCreateFramework(fid, framework->user);
+      evLogger->logFrameworkRegistered(fid, framework->user);
       addFramework(framework);
       break;
     }
@@ -352,8 +352,10 @@ void Master::operator () ()
       unpack<F2M_UNREGISTER_FRAMEWORK>(fid);
       LOG(INFO) << "Asked to unregister framework " << fid;
       Framework *framework = lookupFramework(fid);
-      if (framework != NULL)
+      if (framework != NULL) {
         removeFramework(framework);
+        //evLogger->logFrameworkUnregistered(fid);
+      }
       break;
     }
 
@@ -402,6 +404,7 @@ void Master::operator () ()
         if (task != NULL) {
           LOG(INFO) << "Asked to kill " << task << " by its framework";
           killTask(task);
+          evLogger->logTaskStateUpdated(tid, fid, TASK_KILLED);
         }
       }
       break;
@@ -491,6 +494,7 @@ void Master::operator () ()
           if (task != NULL) {
             LOG(INFO) << "Status update: " << task << " is in state " << state;
             task->state = state;
+            evLogger->logTaskStateUpdated(tid, fid, state);
             // Remove the task if it finished or failed
             if (state == TASK_FINISHED || state == TASK_FAILED ||
                 state == TASK_KILLED || state == TASK_LOST) {
@@ -522,6 +526,7 @@ void Master::operator () ()
           if (task != NULL) {
             LOG(INFO) << "Status update: " << task << " is in state " << state;
             task->state = state;
+            evLogger->logTaskStateUpdated(tid, fid, state);
             // Remove the task if it finished or failed
             if (state == TASK_FINISHED || state == TASK_FAILED ||
                 state == TASK_KILLED || state == TASK_LOST) {
@@ -756,7 +761,7 @@ void Master::processOfferReply(SlotOffer *offer,
     Resources res(params.getInt32("cpus", -1),
                   params.getInt64("mem", -1));
 
-    evLogger->logCreateTask(t.taskId, framework->id, t.slaveId, res);
+    evLogger->logTaskCreated(t.taskId, framework->id, t.slaveId, res);
 
     // Launch the tasks in the response
     launchTask(framework, t);

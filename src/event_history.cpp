@@ -6,7 +6,7 @@
 #include <sys/time.h>
 #include <stdarg.h>
 
-//#include <glog/logging.h>
+#include <glog/logging.h>
 
 //returns the current time in microseconds
 long getTimeStamp(){
@@ -23,18 +23,6 @@ string getHumanReadableTimeStamp(){
   string timestamp = asctime(localtime(&currTime));
   return timestamp.erase(24); /* chop off the newline */
 }
-
-//////////Event/////////
-Event::Event(string s1 = "", string s2 = "") {
-  if (s1.compare("") != 0 && s2.compare("") != 0) {
-    addAttribute(s1,s2);
-  }
-}
-
-void Event::addAttribute(string s1, string s2) {
-  eventBuffer[s1] = s2;
-}
-
 
 //////////FileEventWriter/////////
 FileEventWriter::FileEventWriter() {
@@ -62,42 +50,36 @@ FileEventWriter::~FileEventWriter() {
   cout << "closed log file" << endl;
 }
 
-/*int FileEventWriter::logEvent(map<string,string> keyval_pairs) {
-  logfile << getHumanReadableTimestamp() << ",";
+int FileEventWriter::logTaskCreated(TaskID tid, FrameworkID fwid, SlaveID sid, Resources resVec) {
+  logfile << getHumanReadableTimeStamp() << ",CreateTask, " 
+          << "taskid: " << tid << ", "
+          << "fwid: " << fwid << ", "
+          << "sid: " << sid << ","
+          << "cpus: " << resVec.cpus << ", mem: " << resVec.mem << endl;
 
-  map<string,string>::iterator it;
-  for (it=keyval_pairs.begin(); it != keyval_pairs.end(); it++) {
-    logfile << (*it).first << ":" << (*it).second;
-    cout << (*it).first << ":" << (*it).second;
-    map<string,string>::iterator itp = it;
-    itp++;
-    if (itp == keyval_pairs.end()) {
-      logfile << endl;
-      cout << endl;
-    } else {
-      logfile << ",";
-      cout << ",";
-    }
-  }
-  logfile.flush();
-  return 0;
-}
-*/
-
-int FileEventWriter::logCreateTask(TaskID tid, FrameworkID fwid, SlaveID sid, Resources resVec) {
-  logfile << getHumanReadableTimeStamp() << ",CreateTask" << ", taskid: " << tid << ", fwid: " << fwid << ", sid: " << sid << ",";
-  logfile << "cpus: " << resVec.cpus << ", mem: " << resVec.mem << "\n";
-
-  logfile.flush();
   return 0;
 }
 
-int FileEventWriter::logCreateFramework(FrameworkID fwid, string user) {
-  logfile << getHumanReadableTimeStamp() << "," << "CreateFramework" << ",";
-  logfile << "fwid: " << fwid << ", userid: " << user << "\n";
+int FileEventWriter::logTaskStateUpdated(TaskID tid, FrameworkID fwid, TaskState state) {
+  logfile << getHumanReadableTimeStamp() << ", TaskStateUpdate, " 
+          << "taskid: " << tid << ", "
+          << "fwid: " << fwid << ", "
+          << "state: " << state << endl;
 
-  logfile.flush();
   return 0;
+}
+
+int FileEventWriter::logFrameworkRegistered(FrameworkID fwid, string user) {
+  logfile << getHumanReadableTimeStamp() << ", CreateFramework, "
+          << "fwid: " << fwid << ", "
+          << "userid: " << user << endl;
+
+  return 0;
+}
+
+int FileEventWriter::logFrameworkUnregistered(FrameworkID fwid) {
+  LOG(FATAL) << "FileEventWriter::logFrameworkUnregistered not implemented yet";
+  return -1;
 }
 
 
@@ -139,9 +121,9 @@ SqlLiteEventWriter::SqlLiteEventWriter() {
   //create task table in case it doesn't already exist,
   //if it does this shouldn't destroy it
   sqlite3_exec(db, "CREATE TABLE task (taskid Varchar(255), fwid Varchar(255), sid Varchar(255), datetime_created integer, resource_list Varchar(255))", ::callback, 0, &zErrMsg);
-  sqlite3_exec(db, "CREATE TABLE taskstatus (taskid Varchar(255), fwid Varchar(255), datetime_updated integer)", ::callback, 0, &zErrMsg);
+  sqlite3_exec(db, "CREATE TABLE taskstate (taskid Varchar(255), fwid Varchar(255), state Varchar(255), datetime_updated integer)", ::callback, 0, &zErrMsg);
 
-  sqlite3_exec(db, "CREATE TABLE framework (fwid Varchar(255), user Varchar(255), datetime_created integer)", ::callback, 0, &zErrMsg);
+  sqlite3_exec(db, "CREATE TABLE framework (fwid Varchar(255), user Varchar(255), datetime_registered integer)", ::callback, 0, &zErrMsg);
 }
 
 SqlLiteEventWriter::~SqlLiteEventWriter() {
@@ -149,40 +131,56 @@ SqlLiteEventWriter::~SqlLiteEventWriter() {
   cout << "closed sqllite db" << endl;
 }
 
-int SqlLiteEventWriter::logCreateTask(TaskID tid, FrameworkID fwid, SlaveID sid, Resources resVec) {
+int SqlLiteEventWriter::logTaskCreated(TaskID tid, FrameworkID fwid, SlaveID sid, Resources resVec) {
   stringstream ss;
-  ss << "INSERT INTO task VALUES (";
-  ss << "\"" << tid << "\"" << ",";
-  ss << "\"" << fwid << "\"" << ",";
-  ss << "\"" << sid << "\"" << ",";
-  ss << getTimeStamp() << ",";
-  ss << "'{";
-    ss << "\"cpus\":\"" << resVec.cpus << "\",";
-    ss << "\"mem\":\"" << resVec.mem << "\"";
-  ss << "}'";
-  ss << ")" << endl;
+  ss << "INSERT INTO task VALUES ("
+     << "\"" << tid << "\"" << ","
+     << "\"" << fwid << "\"" << ","
+     << "\"" << sid << "\"" << ","
+     << getTimeStamp() << ","
+     << "'{"
+       << "\"cpus\":\"" << resVec.cpus << "\","
+       << "\"mem\":\"" << resVec.mem << "\""
+     << "}'"
+     << ")" << endl;
   cout << "executing " << ss.str() << endl;
   sqlite3_exec(db, ss.str().c_str(), callback, 0, &zErrMsg); 
 
   return 0;
 }
 
-int SqlLiteEventWriter::logCreateFramework(FrameworkID fwid, string user) {
+int SqlLiteEventWriter::logTaskStateUpdated(TaskID tid, FrameworkID fwid, TaskState state) {
   stringstream ss;
-  ss << "INSERT INTO framework VALUES (";
-  ss << "\"" << fwid << "\"" << ",";
-  ss << "\"" << user << "\"" << ",";
-  ss << getTimeStamp() << ")" << endl;
+  ss << "INSERT INTO taskstate VALUES ("
+     << "\"" << tid << "\"" << ","
+     << "\"" << fwid << "\"" << ","
+     << "\"" << state << "\"" << ","
+     << getTimeStamp() << ")" << endl;
   cout << "executing " << ss.str() << endl;
   sqlite3_exec(db, ss.str().c_str(), callback, 0, &zErrMsg); 
 
   return 0;
+}
+
+int SqlLiteEventWriter::logFrameworkRegistered(FrameworkID fwid, string user) {
+  stringstream ss;
+  ss << "INSERT INTO framework VALUES ("
+     << "\"" << fwid << "\"" << ","
+     << "\"" << user << "\"" << ","
+     << getTimeStamp() << ")" << endl;
+  cout << "executing " << ss.str() << endl;
+  sqlite3_exec(db, ss.str().c_str(), callback, 0, &zErrMsg); 
+
+  return 0;
+}
+
+int SqlLiteEventWriter::logFrameworkUnregistered(FrameworkID fwid) {
+  LOG(FATAL) << "SqlLiteEvent::logFrameworkUnregistered not implemented yet";
+  return -1;
 }
 
 /////////////EventLogger//////////
 EventLogger::EventLogger() {
-  Event event();
-  logOnDestroy = false;
   cout << "creating FileEventWriter" << endl;
   writers.push_front(new FileEventWriter());
   writers.push_front(new SqlLiteEventWriter);
@@ -190,9 +188,6 @@ EventLogger::EventLogger() {
 
 EventLogger::~EventLogger() {
   cout << "In ~EventLogger()" << endl;
-  if (logOnDestroy) {
-    writeEvent();
-  }
   cout << ", cleaning up EventWriters" << endl;
   cout << "num of loggers in list: " << writers.size() << endl;
   //delete all eventWriters in list
@@ -203,55 +198,34 @@ EventLogger::~EventLogger() {
   cout << "num of loggers in list: " << writers.size() << endl;
 }
 
-void EventLogger::setLogOnDestroy(bool newVal) {
-  logOnDestroy = newVal; 
-}
-
-void EventLogger::writeEvent() {
-  //This should loop through all writers in list and send event to each one
-}
-
-int EventLogger::logCreateTask(TaskID tid, FrameworkID fwid, SlaveID sid, Resources resVec) {
+int EventLogger::logFrameworkRegistered(FrameworkID fwid, string user) {
   list<EventWriter*>::iterator it;
   for (it = writers.begin(); it != writers.end(); it++) {
-    (*it)->logCreateTask(tid, fwid, sid, resVec);
-    cout << "logged CreateTask event with " << (*it)->getName() << endl;
+    (*it)->logFrameworkRegistered(fwid, user);
+    cout << "logged FrameworkRegistered event with " << (*it)->getName() << ". fwid: " << fwid << ", user: " << user << endl;
+  }
+}
+
+int EventLogger::logFrameworkUnregistered(FrameworkID fwid) {
+  list<EventWriter*>::iterator it;
+  for (it = writers.begin(); it != writers.end(); it++) {
+    (*it)->logFrameworkUnregistered(fwid);
+    cout << "logged FrameworkUnregistered event with " << (*it)->getName() << ". fwid: " << fwid << endl;
+  }
+}
+
+int EventLogger::logTaskCreated(TaskID tid, FrameworkID fwid, SlaveID sid, Resources resVec) {
+  list<EventWriter*>::iterator it;
+  for (it = writers.begin(); it != writers.end(); it++) {
+    (*it)->logTaskCreated(tid, fwid, sid, resVec);
+    cout << "logged TaskCreated event with " << (*it)->getName() << endl;
   } 
 }
 
-//TODO:logUpdateTaskStatus()
-
-int EventLogger::logCreateFramework(FrameworkID fwid, string user) {
+int EventLogger::logTaskStateUpdated(TaskID tid, FrameworkID fwid, TaskState state) {
   list<EventWriter*>::iterator it;
   for (it = writers.begin(); it != writers.end(); it++) {
-    (*it)->logCreateFramework(fwid, user);
-    cout << "logged CreateFramework event with " << (*it)->getName() << ". fwid: " << fwid << ", user: " << user << endl;
-  }
+    (*it)->logTaskStateUpdated(tid, fwid, state);
+    cout << "logged TaskStateUpated event with " << (*it)->getName() << endl;
+  } 
 }
-
-//TODO:logUpdateFrameworkStatus()
-
-/*EventLogger EventLogger::operator() (string s1, string s2) {
-  event.addAttribute(s1, s2);
-  cout << "added attribute ( " << s1 << ", " << s2 << ") to event" << endl;
-  EventLogger el(*this);
-  el.setLogOnDestroy(true);
-  return el;
-
-int EventLogger::logEvent(int num_pairs, ...) {
-  va_list args;
-  va_start(args, num_pairs);
-  //TODO: check that num_pairs is odd and positive 
-  map<string,string> ev = map<string,string>();
-  char * key, * val;
-  //TODO: accept values other than strings, ints?
-  for (int i = 0; i < num_pairs; i++) {
-    key = va_arg(args, char *);
-    val = va_arg(args, char *);
-    ev[string(key)] = string(val);
-  }
-  EventWriter* fhl = writers.front();
-  fhl->logEvent(ev);
-  va_end(args);
-}
-*/
