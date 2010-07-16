@@ -6,6 +6,8 @@
 
 using std::cerr;
 using std::endl;
+using boost::lexical_cast;
+using boost::bad_lexical_cast;
 
 using namespace nexus::internal::master;
 
@@ -15,6 +17,7 @@ void usage(const char* programName)
   cerr << "Usage: " << programName
        << " [--url URL]"
        << " [--port PORT]"
+       << " [--webui-port PORT]"
        << " [--allocator ALLOCATOR]"
        << " [--quiet]" << endl
        << endl
@@ -36,16 +39,18 @@ int main (int argc, char **argv)
     {"url", required_argument, 0, 'u'},
     {"allocator", required_argument, 0, 'a'},
     {"port", required_argument, 0, 'p'},
+    {"webui-port", required_argument, 0, 'w'},
     {"quiet", no_argument, 0, 'q'},
   };
 
   string url = "";
   string allocator = "simple";
+  char* webuiPortStr = "8080"; // C string because it is sent to python C API
   bool quiet = false;
 
   int opt;
   int index;
-  while ((opt = getopt_long(argc, argv, "u:a:p:q", options, &index)) != -1) {
+  while ((opt = getopt_long(argc, argv, "u:a:p:w:q", options, &index)) != -1) {
     switch (opt) {
       case 'u':
         url = optarg;
@@ -55,6 +60,9 @@ int main (int argc, char **argv)
         break;
       case 'p':
         setenv("LIBPROCESS_PORT", optarg, 1);
+        break;
+      case 'w':
+        webuiPortStr = optarg;
         break;
       case 'q':
         quiet = true;
@@ -86,8 +94,19 @@ int main (int argc, char **argv)
 
 #ifdef NEXUS_WEBUI
   if (chdir(dirname(argv[0])) != 0)
-    fatalerror("could not change into %s for running webui", dirname(argv[0]));
-  startMasterWebUI(pid);
+    fatalerror("Could not change into %s for running webui.\n", dirname(argv[0]));
+
+  // TODO(*): Since we normally don't use exceptions in Mesos, replace
+  // use of an exception here with use of a utility to handle checking
+  // that the input string is actually a number that fits
+  // in the type being used (in this case, short).
+  try {
+    lexical_cast<short>(webuiPortStr);
+  } catch(bad_lexical_cast &) {
+    fatal("Passed invalid string for webui port number.\n");
+  }
+
+  startMasterWebUI(pid, webuiPortStr);
 #endif
   
   Process::wait(pid);
