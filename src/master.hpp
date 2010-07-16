@@ -47,6 +47,7 @@ using boost::unordered_set;
 
 using namespace nexus;
 using namespace nexus::internal;
+using nexus::internal::eventhistory::EventLogger;
 
 
 // Maximum number of slot offers to have outstanding for each framework.

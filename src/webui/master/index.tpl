@@ -8,9 +8,18 @@
 <head>
 <title>Nexus Master on {{HOSTNAME}}</title>
 <!-- Combo-handled YUI CSS files: -->
-<link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/combo?2.8.1/build/paginator/assets/skins/sam/paginator.css&2.8.1/build/datatable/assets/skins/sam/datatable.css">
+<link rel="stylesheet" type="text/css" href="/yui_2.8.1/build/paginator/assets/skins/sam/paginator.css">
+<link rel="stylesheet" type="text/css" href="/yui_2.8.1/build/datatable/assets/skins/sam/datatable.css">
+
 <!-- Combo-handled YUI JS files: -->
-<script type="text/javascript" src="http://yui.yahooapis.com/combo?2.8.1/build/yahoo-dom-event/yahoo-dom-event.js&2.8.1/build/connection/connection-min.js&2.8.1/build/datasource/datasource-min.js&2.8.1/build/element/element-min.js&2.8.1/build/paginator/paginator-min.js&2.8.1/build/datatable/datatable-min.js&2.8.1/build/history/history-min.js&2.8.1/build/json/json-min.js"></script>
+<script type="text/javascript" src="/yui_2.8.1/build/yahoo-dom-event/yahoo-dom-event.js"></script>
+<script type="text/javascript" src="/yui_2.8.1/build/connection/connection-min.js"></script>
+<script type="text/javascript" src="/yui_2.8.1/build/datasource/datasource-min.js"></script>
+<script type="text/javascript" src="/yui_2.8.1/build/element/element-min.js"></script>
+<script type="text/javascript" src="/yui_2.8.1/build/paginator/paginator-min.js"></script>
+<script type="text/javascript" src="/yui_2.8.1/build/datatable/datatable-min.js"></script>
+<script type="text/javascript" src="/yui_2.8.1/build/history/history-min.js"></script>
+<script type="text/javascript" src="/yui_2.8.1/build/json/json-min.js"></script>
 
 <script type='text/javascript'>
 //Copied from http://developer.yahoo.com/yui/examples/datatable/dt_xhrjson.html
@@ -25,6 +34,7 @@ var timestampToDate = function(sTimestamp) {
 YAHOO.util.Event.addListener(window, "load", function() {
   YAHOO.example.XHR_JSON = new function() {
 
+
     // Override the built-in formatter
     YAHOO.widget.DataTable.formatLink = function(elLiner, oRecord, oColumn, oData) {
        var fwid = oData;
@@ -34,7 +44,7 @@ YAHOO.util.Event.addListener(window, "load", function() {
     var myColumnDefs = [
         {key:"fwid", label:"FW ID", sortable:true, formatter:YAHOO.widget.DataTable.formatLink},
         {key:"user", label:"User", sortable:true},
-        {key:"datetime_created", label:"Date", sortable:true, formatter:"date"} 
+        {key:"datetime_registered", label:"Date", sortable:true, formatter:"date"} 
     ];
      
     // DataSource instance
@@ -43,7 +53,7 @@ YAHOO.util.Event.addListener(window, "load", function() {
     myFwDataSource.connXhrMode = "queueRequests";
     myFwDataSource.responseSchema = {
         resultsList: "ResultSet.Items",
-        fields: ["fwid","user",{key:"datetime_created",parser:timestampToDate}]
+        fields: ["fwid","user",{key:"datetime_registered",parser:timestampToDate}]
     };
 
     // DataTable configurations
@@ -64,24 +74,6 @@ YAHOO.util.Event.addListener(window, "load", function() {
 </script>
 
 <link rel="stylesheet" type="text/css" href="/static/stylesheet.css" />
-<!-- <script type='text/javascript' src='http://www.google.com/jsapi'></script>
-  <script type='text/javascript'>
-    google.load('visualization', '1', {'packages':['annotatedtimeline']});
-    google.setOnLoadCallback(drawChart);
-    function drawChart() {
-      //var url = "http://google-visualization.appspot.com/python/dynamic_example";
-      var url = "utilization_table";
-      var query = new google.visualization.Query(url);
-      query.send(handleQueryResponse);
-    }
-
-      function handleQueryResponse(response) { 
-        var data = response.getDataTable();
-        var chart = new google.visualization.AnnotatedTimeLine(document.getElementById('chart_div'));
-        chart.draw(data, {displayAnnotations: true});
-      }
-  </script>
--->
 </head>
 <body>
 

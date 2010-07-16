@@ -7,9 +7,18 @@
 <head>
 <title>Framework {{framework_id}} on {{HOSTNAME}}</title>
 <!-- Combo-handled YUI CSS files: -->
-<link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/combo?2.8.1/build/paginator/assets/skins/sam/paginator.css&2.8.1/build/datatable/assets/skins/sam/datatable.css">
+<link rel="stylesheet" type="text/css" href="/yui_2.8.1/build/paginator/assets/skins/sam/paginator.css">
+<link rel="stylesheet" type="text/css" href="/yui_2.8.1/build/datatable/assets/skins/sam/datatable.css">
+
 <!-- Combo-handled YUI JS files: -->
-<script type="text/javascript" src="http://yui.yahooapis.com/combo?2.8.1/build/yahoo-dom-event/yahoo-dom-event.js&2.8.1/build/connection/connection-min.js&2.8.1/build/datasource/datasource-min.js&2.8.1/build/element/element-min.js&2.8.1/build/paginator/paginator-min.js&2.8.1/build/datatable/datatable-min.js&2.8.1/build/history/history-min.js&2.8.1/build/json/json-min.js"></script>
+<script type="text/javascript" src="/yui_2.8.1/build/yahoo-dom-event/yahoo-dom-event.js"></script>
+<script type="text/javascript" src="/yui_2.8.1/build/connection/connection-min.js"></script>
+<script type="text/javascript" src="/yui_2.8.1/build/datasource/datasource-min.js"></script>
+<script type="text/javascript" src="/yui_2.8.1/build/element/element-min.js"></script>
+<script type="text/javascript" src="/yui_2.8.1/build/paginator/paginator-min.js"></script>
+<script type="text/javascript" src="/yui_2.8.1/build/datatable/datatable-min.js"></script>
+<script type="text/javascript" src="/yui_2.8.1/build/history/history-min.js"></script>
+<script type="text/javascript" src="/yui_2.8.1/build/json/json-min.js"></script>
 
 <script type='text/javascript'>
 //Copied from http://developer.yahoo.com/yui/examples/datatable/dt_xhrjson.html

@@ -11,6 +11,8 @@
 #include <ctime>
 #include <sqlite3.h>
 
+namespace nexus { namespace internal { namespace eventhistory {
+
 using namespace std;
 using nexus::FrameworkID;
 using nexus::TaskID;
@@ -29,6 +31,7 @@ public:
   virtual int logFrameworkUnregistered(FrameworkID) = 0;
 };
 
+
 class FileEventWriter : public EventWriter {
 private:
   ofstream logfile;
@@ -42,6 +45,7 @@ public:
   int logFrameworkRegistered(FrameworkID, string);
   int logFrameworkUnregistered(FrameworkID);
 };
+
 
 class SqlLiteEventWriter : public EventWriter {
 private:
@@ -58,6 +62,7 @@ public:
   int logFrameworkUnregistered(FrameworkID);
 };
 
+
 class EventLogger {
 private:
   list<EventWriter*> writers; 
@@ -71,5 +76,7 @@ public:
   int logFrameworkUnregistered(FrameworkID);
   EventLogger operator() (string, string);
 };
+
+}}} /* namespace */
 
 #endif /* __EVENT_HISTORY_HPP__ */
