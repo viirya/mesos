@@ -29,9 +29,43 @@ var timestampToDate = function(sTimestamp) {
     return new Date(sTimestamp/1000); 
 }; 
 
-var frameworkToURL = function(fwName) {
-   return "http://www.andykonwinski.com"; 
+YAHOO.widget.DataTable.taskIdToURL = function(elLiner, oRecord, oColumn, oData) {
+       var taskid = oData;
+       elLiner.innerHTML = "<a href=\"?fwid={{framework_id}}&taskid=" + taskid + "\">" + taskid + "</a>";
 };
+
+var formatTime = function(elLiner, oRecord, oColumn, oData) {
+   var mydate = oData;
+   elLiner.innerHTML = (mydate.getMonth()+1).toString() + "/" + mydate.getDate() + "/" + mydate.getFullYear() + " " + mydate.getHours() + ":" + mydate.getMinutes() + ":" + mydate.getSeconds() + ":" + mydate.getMilliseconds();
+};
+
+var formatState = function(elLiner, oRecord, oColumn, oData) {
+   var state = oData;
+   switch(parseInt(state))
+   {
+   case 0:
+     elLiner.innerHTML = "TASK_STARTING";
+     break;
+   case 1:
+     elLiner.innerHTML = "TASK_RUNNING";
+     break;
+   case 2:
+     elLiner.innerHTML = "TASK_FINISHED";
+     break;
+   case 3:
+     elLiner.innerHTML = "TASK_FAILED";
+     break;
+   case 4:
+     elLiner.innerHTML = "TASK_KILLED";
+     break;
+   case 5:
+     elLiner.innerHTML = "TASK_LOST";
+     break;
+   Default:
+     elLiner.innerHTML = "(bad state number reported)";
+   }
+};
+
 
 //SETUP TASKS TABLE
 YAHOO.util.Event.addListener(window, "load", function() {
@@ -39,9 +73,9 @@ YAHOO.util.Event.addListener(window, "load", function() {
 
     // Define columns
     var myColumnDefs = [
-        {key:"taskid", label:"Task ID", sortable:true},
+        {key:"taskid", label:"Task ID", sortable:true, formatter:YAHOO.widget.DataTable.taskIdToURL},
         {key:"fwid", label:"FW ID", sortable:true},
-        {key:"datetime_created", label:"Date-time created", sortable:true, formatter:YAHOO.widget.DataTable.formatDate}, 
+        {key:"datetime_created", label:"Date-time created", sortable:true, formatter:formatTime},
         {key:"resource_list.cpus", label:"Num Cores", sortable:true, formatter:YAHOO.widget.DataTable.formatNumber},
         {key:"resource_list.mem", label:"Memory(MB)", sortable:true, formatter:YAHOO.widget.DataTable.formatNumber}
     ];
@@ -86,8 +120,64 @@ YAHOO.util.Event.addListener(window, "load", function() {
 
   };
 });
-
 </script>
+%if task_id != "":
+%  
+<script type='text/javascript'>
+  //SETUP TASK DETAILS TABLE
+  YAHOO.util.Event.addListener(window, "load", function() {
+    YAHOO.example.XHR_JSON = new function() {
+
+      // Define columns
+      var myColumnDefs2 = [
+          {key:"taskid", label:"Task ID", sortable:true},
+          {key:"fwid", label:"FW ID", sortable:true},
+          {key:"datetime_updated", label:"Date-time updated", sortable:true, formatter:formatTime}, 
+          {key:"state", label:"State", sortable:true, formatter:formatState}
+      ];
+
+      // DataSource instance
+      myTaskDetailsDataSource = new YAHOO.util.DataSource("../task_details_json?");
+      myTaskDetailsDataSource.responseType = YAHOO.util.DataSource.TYPE_JSON;
+      myTaskDetailsDataSource.connXhrMode = "queueRequests";
+      myTaskDetailsDataSource.responseSchema = {
+          resultsList: "ResultSet.Items",
+          fields: ["taskid",
+                   "fwid",
+                   {key:"datetime_updated",parser:timestampToDate},
+                   "state"]
+      };
+
+      // A custom function to translate the js paging request into a query
+      // string sent to the XHR DataSource
+      var buildQueryString2 = function (state,dt) {
+          return "startIndex=" + state.pagination.recordOffset +
+                 "&results=" + state.pagination.rowsPerPage +
+                 "&fwid=" + {{framework_id}} +
+                 "&taskid=" + {{task_id}};
+          };
+
+      // DataTable configurations
+      var myConfig2 = {
+        // Create the Paginator
+         paginator: new YAHOO.widget.Paginator({
+            template : "{PreviousPageLink} {CurrentPageReport} {NextPageLink} {RowsPerPageDropdown}",
+            pageReportTemplate : "Showing items {startIndex} - {endIndex} of {totalRecords}",
+            rowsPerPage: 20,
+            rowsPerPageOptions: [20,50,100,200,500]
+        }),
+        initialRequest: 'startIndex=0&results=20&fwid={{framework_id}}&taskid={{task_id}}',
+        generateRequest: buildQueryString2
+      }; 
+
+      // Instantiate DataTable
+      var myDataTable2 = new YAHOO.widget.DataTable("task_details_table", 
+          myColumnDefs2, myTaskDetailsDataSource, myConfig2);
+
+    };
+  });
+</script>
+%end
 
 <link rel="stylesheet" type="text/css" href="/static/stylesheet.css" />
 </head>
@@ -154,10 +244,13 @@ YAHOO.util.Event.addListener(window, "load", function() {
   <p>No framework with ID {{framework_id}} is connected.</p>
 %end
 
+%if task_id != "":
+  <h2>Task {{task_id}} Details</h2>
+  <div id="task_details_table"></div>
+%end
 
-  <h2>Task History</h2>
-  <!--div id='chart_div' style='width: 700px; height: 240px;'></div>-->
-  <div id="tasks_table"></div>
+<h2>Task History</h2>
+  <div id="tasks_table" ></div>
 
 <p><a href="/">Back to Master</a></p>
 

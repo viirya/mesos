@@ -18,10 +18,11 @@ def index():
   return template("index", start_time = start_time)
 
 
-@route('/framework/:id#[0-9]*\-[0-9]*#')
+@route('/framework/:id')
 def framework(id):
+  taskid = request.GET.get('taskid', '').strip()
   bottle.TEMPLATES.clear() # For rapid development
-  return template("framework", framework_id = id)
+  return template("framework", framework_id = id, task_id = taskid)
 
 
 @route('/static/:filename#.*#')
@@ -71,6 +72,41 @@ def tasks_json():
         json_string += "\t\t\"" + col + "\":" + str(row[col])
       else:
         json_string += "\t\t\"" + col + "\":\"" + str(row[col]) + "\""
+      if i != len(row.keys()):
+        json_string += ","
+      json_string += "\n"
+    json_string += "\t\t}"
+    if k != len(result):
+      json_string += ","
+    json_string += "\n"
+  json_string += "\t]}\n}"
+  response.header['Content-Type'] = 'text/plain' 
+  return str(json_string)
+
+
+#generate list of state updates for this task
+@route('/task_details_json')
+def tasks_json():
+  fwid = request.GET.get('fwid', '').strip()
+  taskid = request.GET.get('taskid', '').strip()
+  try:
+    conn = sqlite3.connect(database_location)
+  except:
+    return "Error opening database at " + database_location
+  conn.row_factory = sqlite3.Row
+  c = conn.cursor()
+  #TODO(andyk): prevent SQL injection! This is probably dangerous!
+  c.execute("SELECT * FROM taskstate WHERE fwid = \"" + fwid + "\" and taskid = \"" + taskid + "\";")
+  result = c.fetchall()
+  json_string = "{\"ResultSet\": {\"TotalItems\":" + str(len(result)) + ", \"Items\":[\n"
+  k = 0
+  for row in result:
+    k += 1
+    json_string += "\t\t{\n"
+    i = 0
+    for col in row.keys():
+      i += 1
+      json_string += "\t\t\"" + col + "\":\"" + str(row[col]) + "\""
       if i != len(row.keys()):
         json_string += ","
       json_string += "\n"

@@ -41,10 +41,15 @@ YAHOO.util.Event.addListener(window, "load", function() {
        elLiner.innerHTML = "<a href=\"framework/" + fwid + "\">" + fwid + "</a>";
     };
 
+    var formatTime = function(elLiner, oRecord, oColumn, oData) {
+       var mydate = oData;
+       elLiner.innerHTML = (mydate.getMonth()+1).toString() + "/" + mydate.getDate() + "/" + mydate.getFullYear() + " " + mydate.getHours() + ":" + mydate.getMinutes() + ":" + mydate.getSeconds() + ":" + mydate.getMilliseconds();
+    };
+
     var myColumnDefs = [
         {key:"fwid", label:"FW ID", sortable:true, formatter:YAHOO.widget.DataTable.formatLink},
         {key:"user", label:"User", sortable:true},
-        {key:"datetime_registered", label:"Date", sortable:true, formatter:"date"} 
+        {key:"datetime_registered", label:"Date-time created", sortable:true, formatter:formatTime} 
     ];
      
     // DataSource instance
