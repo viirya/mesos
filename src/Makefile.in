@@ -95,7 +95,7 @@ LIBS += -lglog -lgtest -lprocess -lev -lpthread -ldl -lzookeeper_st -lsqlite3
 
 NEXUS_EXES = nexus-master nexus-slave nexus-local nexus-launcher \
 	     test-framework test-executor cpp-test-framework cpp-test-executor \
-	     memhog memhog-executor
+	     memhog memhog-executor scheduled-memhog
 
 ifeq ($(OS_NAME),solaris)
   NEXUS_EXES += nexus-projd
@@ -112,11 +112,15 @@ NEXUS_LIBS = $(SCHED_LIB) $(EXEC_LIB) $(NEXUS_LIB)
 MASTER_OBJ = master.o allocator_factory.o simple_allocator.o
 SLAVE_OBJ = slave.o launcher.o isolation_module.o \
 	    process_based_isolation_module.o
-COMMON_OBJ = fatal.o hash_pid.o messages.o lock.o master_detector.o url_processor.o zookeeper.o event_history.o
+COMMON_OBJ = fatal.o hash_pid.o messages.o lock.o master_detector.o \
+	     url_processor.o zookeeper.o configurator.o string_utils.o \
+	     logging.o event_history.o
 EXEC_LIB_OBJ = nexus_exec.o
 SCHED_LIB_OBJ = nexus_sched.o nexus_local.o params.o
 TEST_OBJ = tests/main.o tests/test_master.o tests/test_resources.o \
 	   tests/external_test.o tests/test_sample_frameworks.o \
+	   tests/testing_utils.o tests/test_configurator.o \
+	   tests/test_string_utils.o tests/test_lxc_isolation.o
 		 tests/test_event_history.o
 
 ifeq ($(OS_NAME),solaris)
@@ -195,8 +199,8 @@ slave_webui.o: slave_webui.cpp config.hpp messages.hpp
 nexus-slave: slave_main.cpp $(SLAVE_OBJ) $(COMMON_OBJ) slave_webui.o webui/slave/swig/slave_wrap.o
 	$(CXX) $(CXXFLAGS) $(WEBUI_FLAGS) -o $@ $< $(SLAVE_OBJ) slave_webui.o webui/slave/swig/slave_wrap.o $(COMMON_OBJ) $(LDFLAGS) $(LIBS)
 
-nexus-launcher: launcher_main.cpp launcher.o fatal.o
-	$(CXX) $(CXXFLAGS) -o $@ $< launcher.o fatal.o $(LDFLAGS) $(LIBS)
+nexus-launcher: launcher_main.cpp launcher.o $(COMMON_OBJ)
+	$(CXX) $(CXXFLAGS) -o $@ $< launcher.o $(COMMON_OBJ) $(LDFLAGS) $(LIBS)
 
 nexus-projd: projd.cpp $(COMMON_OBJ)
 	$(CXX) $(CXXFLAGS) -o $@ $< $(COMMON_OBJ) $(LDFLAGS) $(LIBS)
@@ -225,6 +229,9 @@ memhog: memhog.cpp $(NEXUS_LIB) third_party/libprocess/libprocess.a
 	$(CXX) $(CXXFLAGS) -o $@ $< -L. $(LDFLAGS) -lnexus++ $(LIBS) 
 
 memhog-executor: memhog_executor.cpp $(NEXUS_LIB) third_party/libprocess/libprocess.a
+	$(CXX) $(CXXFLAGS) -o $@ $< -L. $(LDFLAGS) -lnexus++ $(LIBS) 
+
+scheduled-memhog: scheduled_memhog.cpp $(NEXUS_LIB) third_party/libprocess/libprocess.a
 	$(CXX) $(CXXFLAGS) -o $@ $< -L. $(LDFLAGS) -lnexus++ $(LIBS) 
 
 java: $(JAVA_LIB) swig/java/nexus.jar swig/java/TestFramework.class swig/java/TestExecutor.class swig/java/TestExceptionFramework.class swig/java/TestExceptionExecutor.class

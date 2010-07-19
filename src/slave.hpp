@@ -28,6 +28,7 @@
 
 #include <reliable.hpp>
 
+#include "configurator.hpp"
 #include "fatal.hpp"
 #include "foreach.hpp"
 #include "isolation_module.hpp"
@@ -158,6 +159,8 @@ struct Executor
 class Slave : public Tuple<ReliableProcess>
 {
 public:
+  Params conf;
+
   typedef unordered_map<FrameworkID, Framework*> FrameworkMap;
   typedef unordered_map<FrameworkID, Executor*> ExecutorMap;
   
@@ -173,9 +176,13 @@ public:
   unordered_map<FrameworkID, unordered_set<int> > seqs;
 
 public:
-  Slave(Resources resources, bool local, IsolationModule *isolationModule);
+  Slave(Resources resources, bool local, IsolationModule* isolationModule);
+
+  Slave(const Params& conf, bool local, IsolationModule *isolationModule);
 
   virtual ~Slave();
+
+  static void registerOptions(Configurator* conf);
 
   state::SlaveState *getState();
 
@@ -184,9 +191,14 @@ public:
 
   string getWorkDirectory(FrameworkID fid);
 
+  // Remove a framework's Executor, possibly killing its process
+  void removeExecutor(FrameworkID frameworkId, bool killProcess);
+
   // TODO(benh): Can this be cleaner?
   // Make self() public so that isolation modules and tests can access it
   using Tuple<ReliableProcess>::self;
+
+  const Params& getConf();
 
 protected:
   void operator () ();
@@ -198,9 +210,6 @@ protected:
   // Send any tasks queued up for the given framework to its executor
   // (needed if we received tasks while the executor was starting up)
   void sendQueuedTasks(Framework *framework);
-
-  // Remove a framework's Executor, possibly killing its process
-  void removeExecutor(FrameworkID frameworkId, bool killProcess);
 
   // Kill a framework (including its executor)
   void killFramework(Framework *fw);

@@ -1,6 +1,8 @@
 #include <getopt.h>
 #include <libgen.h>
 
+#include "configurator.hpp"
+#include "logging.hpp"
 #include "master.hpp"
 #include "master_webui.hpp"
 
@@ -12,101 +14,64 @@ using boost::bad_lexical_cast;
 using namespace nexus::internal::master;
 
 
-void usage(const char* programName)
+void usage(const char* progName, const Configurator& conf)
 {
-  cerr << "Usage: " << programName
-       << " [--url URL]"
-       << " [--port PORT]"
-       << " [--webui-port PORT]"
-       << " [--allocator ALLOCATOR]"
-       << " [--quiet]" << endl
+  cerr << "Usage: " << progName << " [--port=PORT] [--url=URL] [...]" << endl
        << endl
-       << "URL (used for contending to be a master) may be one of:" << endl
+       << "URL (used for leader election with ZooKeeper) may be one of:" << endl
        << "  zoo://host1:port1,host2:port2,..." << endl
-       << "  zoofile://file where file contains a host:port pair per line"
-       << endl;
+       << "  zoofile://file where file has one host:port pair per line" << endl
+       << endl
+       << "Supported options:" << endl
+       << conf.getUsage();
 }
 
 
-int main (int argc, char **argv)
+int main(int argc, char **argv)
 {
+  Configurator conf;
+  conf.addOption<string>("url", 'u', "URL used for leader election");
+  conf.addOption<int>("port", 'p', "Port to listen on", 50010);
+#ifdef NEXUS_WEBUI
+  conf.addOption<int>("webui_port", 'w', "Web UI port", 8080);
+#endif
+  Logging::registerOptions(&conf);
+  Master::registerOptions(&conf);
+
   if (argc == 2 && string("--help") == argv[1]) {
-    usage(argv[0]);
+    usage(argv[0], conf);
     exit(1);
   }
 
-  option options[] = {
-    {"url", required_argument, 0, 'u'},
-    {"allocator", required_argument, 0, 'a'},
-    {"port", required_argument, 0, 'p'},
-    {"webui-port", required_argument, 0, 'w'},
-    {"quiet", no_argument, 0, 'q'},
-  };
-
-  string url = "";
-  string allocator = "simple";
-  char* webuiPortStr = "8080"; // C string because it is sent to python C API
-  bool quiet = false;
-
-  int opt;
-  int index;
-  while ((opt = getopt_long(argc, argv, "u:a:p:w:q", options, &index)) != -1) {
-    switch (opt) {
-      case 'u':
-        url = optarg;
-        break;
-      case 'a':
-        allocator = optarg;
-        break;
-      case 'p':
-        setenv("LIBPROCESS_PORT", optarg, 1);
-        break;
-      case 'w':
-        webuiPortStr = optarg;
-        break;
-      case 'q':
-        quiet = true;
-        break;
-      case '?':
-        // Error parsing options; getopt prints an error message, so just exit
-        exit(1);
-        break;
-      default:
-        break;
-    }
+  Params params;
+  try {
+    params = conf.load(argc, argv, true);
+  } catch (ConfigurationException& e) {
+    cerr << "Configuration error: " << e.what() << endl;
+    exit(1);
   }
 
-  // TODO(benh): Don't log to /tmp behind a sys admin's back!
-  FLAGS_log_dir = "/tmp";
-  FLAGS_logbufsecs = 1;
-  google::InitGoogleLogging(argv[0]);
+  Logging::init(argv[0], params);
 
-  if (!quiet)
-    google::SetStderrLogging(google::INFO);
+  if (params.contains("port"))
+    setenv("LIBPROCESS_PORT", params["port"].c_str(), 1);
+
+  string url = params.get("url", "");
 
   LOG(INFO) << "Build: " << BUILD_DATE << " by " << BUILD_USER;
   LOG(INFO) << "Starting Nexus master";
 
-  Master *master = new Master(allocator);
+  if (chdir(dirname(argv[0])) != 0)
+    fatalerror("Could not chdir into %s", dirname(argv[0]));
+
+  Master *master = new Master(params);
   PID pid = Process::spawn(master);
 
+  bool quiet = Logging::isQuiet(params);
   MasterDetector *detector = MasterDetector::create(url, pid, true, quiet);
 
 #ifdef NEXUS_WEBUI
-  if (chdir(dirname(argv[0])) != 0)
-    fatalerror("Could not change into %s for running webui.\n", dirname(argv[0]));
-
-  // TODO(*): Since we normally don't use exceptions in Mesos, replace
-  // use of an exception here with use of a utility to handle checking
-  // that the input string is actually a number that fits
-  // in the type being used (in this case, short).
-  try {
-    lexical_cast<short>(webuiPortStr);
-  } catch(bad_lexical_cast &) {
-    fatal("Passed invalid string for webui port number.\n");
-  }
-
-  startMasterWebUI(pid, webuiPortStr);
+  startMasterWebUI(pid, (char*) params["webui_port"].c_str());
 #endif
   
   Process::wait(pid);
