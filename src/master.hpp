@@ -198,7 +198,7 @@ struct Slave
   SlaveID id;
   bool active; // Turns false when slave is being removed
   string hostname;
-  string publicDns;
+  string webuiUrl;
   double connectTime;
   double lastHeartbeat;
   

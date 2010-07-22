@@ -29,9 +29,14 @@ var timestampToDate = function(sTimestamp) {
     return new Date(sTimestamp/1000); 
 }; 
 
-YAHOO.widget.DataTable.taskIdToURL = function(elLiner, oRecord, oColumn, oData) {
+var taskIdToURL = function(elLiner, oRecord, oColumn, oData) {
        var taskid = oData;
        elLiner.innerHTML = "<a href=\"?fwid={{framework_id}}&taskid=" + taskid + "\">" + taskid + "</a>";
+};
+
+var webuiUrlToURL = function(elLiner, oRecord, oColumn, oData) {
+       var webuiUrl = oData;
+       elLiner.innerHTML = "<a href=\"http://" + webuiUrl + "\">" + webuiUrl + "</a>";
 };
 
 var formatTime = function(elLiner, oRecord, oColumn, oData) {
@@ -73,8 +78,9 @@ YAHOO.util.Event.addListener(window, "load", function() {
 
     // Define columns
     var myColumnDefs = [
-        {key:"taskid", label:"Task ID", sortable:true, formatter:YAHOO.widget.DataTable.taskIdToURL},
-        {key:"fwid", label:"FW ID", sortable:true},
+        {key:"taskid", label:"Task ID", sortable:true, formatter:taskIdToURL},
+        {key:"sid", label:"Slave ID", sortable:true,},
+        {key:"webuiUrl", label:"Slave Webui URL", sortable:true, formatter:webuiUrlToURL},
         {key:"datetime_created", label:"Date-time created", sortable:true, formatter:formatTime},
         {key:"resource_list.cpus", label:"Num Cores", sortable:true, formatter:YAHOO.widget.DataTable.formatNumber},
         {key:"resource_list.mem", label:"Memory(MB)", sortable:true, formatter:YAHOO.widget.DataTable.formatNumber}
@@ -88,6 +94,8 @@ YAHOO.util.Event.addListener(window, "load", function() {
         resultsList: "ResultSet.Items",
         fields: ["taskid",
                  "fwid",
+                 "sid",
+                 "webuiUrl", 
                  {key:"datetime_created",parser:timestampToDate},
                  {key:"resource_list.cpus",parser:"number"},
                  {key:"resource_list.mem",parser:"number"}]
@@ -105,8 +113,10 @@ YAHOO.util.Event.addListener(window, "load", function() {
     var myConfig = {
       // Create the Paginator
        paginator: new YAHOO.widget.Paginator({
-          template : "{PreviousPageLink} {CurrentPageReport} {NextPageLink} {RowsPerPageDropdown}",
-          pageReportTemplate : "Showing items {startIndex} - {endIndex} of {totalRecords}",
+          template: "{PreviousPageLink} {CurrentPageReport} {NextPageLink} "
+                  + "{RowsPerPageDropdown}",
+          pageReportTemplate: "Showing items {startIndex} - {endIndex} of "
+                            + "{totalRecords}",
           rowsPerPage: 20,
           rowsPerPageOptions: [20,50,100,200,500]
       }),
@@ -131,7 +141,6 @@ YAHOO.util.Event.addListener(window, "load", function() {
       // Define columns
       var myColumnDefs2 = [
           {key:"taskid", label:"Task ID", sortable:true},
-          {key:"fwid", label:"FW ID", sortable:true},
           {key:"datetime_updated", label:"Date-time updated", sortable:true, formatter:formatTime}, 
           {key:"state", label:"State", sortable:true, formatter:formatState}
       ];
@@ -161,12 +170,15 @@ YAHOO.util.Event.addListener(window, "load", function() {
       var myConfig2 = {
         // Create the Paginator
          paginator: new YAHOO.widget.Paginator({
-            template : "{PreviousPageLink} {CurrentPageReport} {NextPageLink} {RowsPerPageDropdown}",
-            pageReportTemplate : "Showing items {startIndex} - {endIndex} of {totalRecords}",
+            template: "{PreviousPageLink} {CurrentPageReport} "
+                    + "{NextPageLink} {RowsPerPageDropdown}",
+            pageReportTemplate : "Showing items {startIndex} - {endIndex} of "
+                               + "{totalRecords}",
             rowsPerPage: 20,
             rowsPerPageOptions: [20,50,100,200,500]
         }),
-        initialRequest: 'startIndex=0&results=20&fwid={{framework_id}}&taskid={{task_id}}',
+        initialRequest: "startIndex=0&results=20&fwid={{framework_id}}"
+                      + "&taskid={{task_id}}",
         generateRequest: buildQueryString2
       }; 
 
@@ -181,7 +193,7 @@ YAHOO.util.Event.addListener(window, "load", function() {
 
 <link rel="stylesheet" type="text/css" href="/static/stylesheet.css" />
 </head>
-<body>
+<body class="yui-skin-sam">
 
 <h1>Framework {{framework_id}} on {{HOSTNAME}}</h1>
 
@@ -229,7 +241,7 @@ YAHOO.util.Event.addListener(window, "load", function() {
       <td>{{TASK_STATES[task.state]}}</td>
       %if task.slave_id in slaves:
         %s = slaves[task.slave_id]
-        <td><a href="http://{{s.public_dns}}:8081/">{{s.public_dns}}</a></td>
+        <td><a href="http://{{s.webuiUrl}}">{{s.webuiUrl}}</a></td>
       %else:
         <td>Slave {{task.slave_id}} (disconnected)</td>
       %end
@@ -241,7 +253,7 @@ YAHOO.util.Event.addListener(window, "load", function() {
     <p>No tasks are running.</p>
   %end
 %else:
-  <p>No framework with ID {{framework_id}} is connected.</p>
+  <p>The framework with ID {{framework_id}} is not currently connected.</p>
 %end
 
 %if task_id != "":

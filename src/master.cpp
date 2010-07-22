@@ -173,7 +173,7 @@ state::MasterState * Master::getState()
     new state::MasterState(BUILD_DATE, BUILD_USER, oss.str());
 
   foreachpair (_, Slave *s, slaves) {
-    state::Slave *slave = new state::Slave(s->id, s->hostname, s->publicDns,
+    state::Slave *slave = new state::Slave(s->id, s->hostname, s->webuiUrl,
           s->resources.cpus, s->resources.mem, s->connectTime);
     state->slaves.push_back(slave);
   }
@@ -432,7 +432,7 @@ void Master::operator () ()
       string slaveId = lexical_cast<string>(masterId) + "-"
         + lexical_cast<string>(nextSlaveId++);
       Slave *slave = new Slave(from(), slaveId, elapsed());
-      unpack<S2M_REGISTER_SLAVE>(slave->hostname, slave->publicDns,
+      unpack<S2M_REGISTER_SLAVE>(slave->hostname, slave->webuiUrl,
                                  slave->resources);
       LOG(INFO) << "Registering " << slave << " at " << slave->pid;
       slaves[slave->id] = slave;
@@ -447,7 +447,7 @@ void Master::operator () ()
     case S2M_REREGISTER_SLAVE: {
       Slave *slave = new Slave(from(), "", elapsed());
       vector<Task> taskVec;
-      unpack<S2M_REREGISTER_SLAVE>(slave->id, slave->hostname, slave->publicDns,
+      unpack<S2M_REREGISTER_SLAVE>(slave->id, slave->hostname, slave->webuiUrl,
                                    slave->resources, taskVec);
 
       if (slave->id == "") {
@@ -784,7 +784,9 @@ void Master::processOfferReply(SlotOffer *offer,
     Resources res(params.getInt32("cpus", -1),
                   params.getInt64("mem", -1));
 
-    evLogger->logTaskCreated(t.taskId, framework->id, t.slaveId, res);
+    Slave *slave = lookupSlave(t.slaveId);
+    evLogger->logTaskCreated(t.taskId, framework->id, t.slaveId, 
+                             slave->webuiUrl, res);
 
     // Launch the tasks in the response
     launchTask(framework, t);

@@ -58,7 +58,7 @@ def tasks_json():
   conn.row_factory = sqlite3.Row
   c = conn.cursor()
   #TODO(andyk): prevent SQL injection! This is probably dangerous!
-  c.execute("SELECT * FROM task WHERE fwid = \"" + fwid + "\";")
+  c.execute("SELECT * FROM task WHERE fwid = \"" + fwid + "\" ORDER BY \"datetime_created\" DESC;")
   result = c.fetchall()
   json_string = "{\"ResultSet\": {\"TotalItems\":" + str(len(result)) + ", \"Items\":[\n"
   k = 0
@@ -128,7 +128,7 @@ def frameworks_json():
     return "Error opening database at " + database_location
   conn.row_factory = sqlite3.Row
   c = conn.cursor()
-  c.execute("SELECT * FROM framework;")
+  c.execute("SELECT * FROM framework ORDER BY \"datetime_registered\" DESC;")
   result = c.fetchall()
   json_string = "{\"ResultSet\": {\"TotalItems\":" + str(len(result)) + ", \"Items\":[\n"
   k = 0
@@ -152,7 +152,7 @@ def frameworks_json():
 
 bottle.TEMPLATE_PATH.append('./webui/master/%s.tpl')
 if sys.argv[1]:
-  init_port = sys.argv[1] 
+  webui_port = sys.argv[1] 
 else:
-  init_port = 8080
-bottle.run(host = '0.0.0.0', port = init_port)
+  webui_port = 8080
+bottle.run(host = '0.0.0.0', port = webui_port)

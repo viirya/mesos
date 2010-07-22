@@ -55,7 +55,7 @@ FileEventWriter::~FileEventWriter() {
 
 
 int FileEventWriter::logTaskCreated(TaskID tid, FrameworkID fwid, SlaveID sid,
-                                    Resources resVec)
+                                    string webuiUrl, Resources resVec)
 {
   logfile << getHumanReadableTimeStamp() << ",CreateTask, "
           << "taskid: " << tid << ", "
@@ -132,16 +132,18 @@ SqlLiteEventWriter::SqlLiteEventWriter() {
   //create task table in case it doesn't already exist,
   //if it does this shouldn't destroy it
   sqlite3_exec(db, "CREATE TABLE task (taskid Varchar(255), fwid Varchar(255), \
-                    sid Varchar(255), datetime_created integer, \
-                    resource_list Varchar(255))", ::callback, 0, &zErrMsg);
+                    sid Varchar(255), webuiUrl Varchar(255), \
+                    datetime_created integer, resource_list Varchar(255))",
+               ::callback, 0, &zErrMsg);
 
   sqlite3_exec(db, "CREATE TABLE taskstate (taskid Varchar(255), \
                     fwid Varchar(255), state Varchar(255), \
-                    datetime_updated integer)", ::callback, 0, &zErrMsg);
+                    datetime_updated integer)",
+               ::callback, 0, &zErrMsg);
 
   sqlite3_exec(db, "CREATE TABLE framework (fwid Varchar(255), \
                     user Varchar(255), datetime_registered integer)",
-                    ::callback, 0, &zErrMsg);
+               ::callback, 0, &zErrMsg);
 }
 
 
@@ -152,13 +154,15 @@ SqlLiteEventWriter::~SqlLiteEventWriter() {
 
 
 int SqlLiteEventWriter::logTaskCreated(TaskID tid, FrameworkID fwid,
-                                       SlaveID sid, Resources resVec)
+                                       SlaveID sid, string webuiUrl, 
+                                       Resources resVec)
 {
   stringstream ss;
   ss << "INSERT INTO task VALUES ("
      << "\"" << tid << "\"" << ","
      << "\"" << fwid << "\"" << ","
      << "\"" << sid << "\"" << ","
+     << "\"" << webuiUrl << "\"" << ","
      << getTimeStamp() << ","
      << "'{"
        << "\"cpus\":\"" << resVec.cpus << "\","
@@ -245,11 +249,11 @@ int EventLogger::logFrameworkUnregistered(FrameworkID fwid) {
 
 
 int EventLogger::logTaskCreated(TaskID tid, FrameworkID fwid, SlaveID sid,
-                                Resources resVec)
+                                string webuiUrl, Resources resVec)
 {
   list<EventWriter*>::iterator it;
   for (it = writers.begin(); it != writers.end(); it++) {
-    (*it)->logTaskCreated(tid, fwid, sid, resVec);
+    (*it)->logTaskCreated(tid, fwid, sid, webuiUrl, resVec);
     DLOG(INFO) << "logged TaskCreated event with " << (*it)->getName() << endl;
   }
 }

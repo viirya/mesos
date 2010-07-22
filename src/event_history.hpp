@@ -25,7 +25,7 @@ class EventWriter {
 public:
   virtual ~EventWriter() {}
   virtual string getName() = 0;
-  virtual int logTaskCreated(TaskID, FrameworkID, SlaveID, Resources) = 0;
+  virtual int logTaskCreated(TaskID, FrameworkID, SlaveID, string webuiUrl, Resources) = 0;
   virtual int logTaskStateUpdated(TaskID, FrameworkID, TaskState) = 0; 
   virtual int logFrameworkRegistered(FrameworkID, string) = 0;
   virtual int logFrameworkUnregistered(FrameworkID) = 0;
@@ -40,7 +40,7 @@ public:
   string getName();
   FileEventWriter(); 
   ~FileEventWriter();
-  int logTaskCreated(TaskID, FrameworkID, SlaveID, Resources);
+  int logTaskCreated(TaskID, FrameworkID, SlaveID, string webuiUrl, Resources);
   int logTaskStateUpdated(TaskID, FrameworkID, TaskState); 
   int logFrameworkRegistered(FrameworkID, string);
   int logFrameworkUnregistered(FrameworkID);
@@ -56,7 +56,7 @@ public:
   string getName();
   SqlLiteEventWriter(); 
   ~SqlLiteEventWriter();
-  int logTaskCreated(TaskID, FrameworkID, SlaveID, Resources);
+  int logTaskCreated(TaskID, FrameworkID, SlaveID, string webuiUrl, Resources);
   int logTaskStateUpdated(TaskID, FrameworkID, TaskState); 
   int logFrameworkRegistered(FrameworkID, string);
   int logFrameworkUnregistered(FrameworkID);
@@ -70,7 +70,7 @@ public:
   EventLogger(); 
   ~EventLogger();
   int logResourceOffer(FrameworkID, Resources);
-  int logTaskCreated(TaskID, FrameworkID, SlaveID, Resources);
+  int logTaskCreated(TaskID, FrameworkID, SlaveID, string webuiUrl, Resources);
   int logTaskStateUpdated(TaskID, FrameworkID, TaskState); 
   int logFrameworkRegistered(FrameworkID, string);
   int logFrameworkUnregistered(FrameworkID);

@@ -135,13 +135,20 @@ void Slave::operator () ()
   hostent *he = gethostbyname2(buf, AF_INET);
   const char *hostname = he->h_name;
 
-  // Get our public DNS name. Normally this is our hostname, but on EC2
+  // Get our webui URL. Normally this is our hostname, but on EC2
   // we look for the NEXUS_PUBLIC_DNS environment variable. This allows
-  // the master to display our public name in its web UI.
-  const char *publicDns = getenv("NEXUS_PUBLIC_DNS");
-  if (!publicDns) {
-    publicDns = hostname;
-  }
+  // the master to display our public name in its web UI. Must include port#.
+  LOG(INFO) << "setting up webuiUrl on port " << conf["webui_port"];
+  const char* publicDns = getenv("NEXUS_PUBLIC_DNS");
+  string webuiUrl;
+  if (publicDns != NULL)
+    webuiUrl = publicDns;
+  else
+    webuiUrl = hostname;
+#ifdef NEXUS_WEBUI
+  webuiUrl += ":" + conf["webui_port"];
+#endif
+  LOG(INFO) << "webuiUrl setup in slave.cpp as " << webuiUrl << endl;
 
   // Initialize isolation module.
   isolationModule->initialize(this);
@@ -161,7 +168,7 @@ void Slave::operator () ()
 
 	if (id.empty()) {
 	  // Slave started before master.
-	  send(master, pack<S2M_REGISTER_SLAVE>(hostname, publicDns, resources));
+	  send(master, pack<S2M_REGISTER_SLAVE>(hostname, webuiUrl, resources));
 	} else {
 	  // Reconnecting, so reconstruct resourcesInUse for the master.
 	  Resources resourcesInUse; 
@@ -176,7 +183,7 @@ void Slave::operator () ()
 	    }
 	  }
 
-	  send(master, pack<S2M_REREGISTER_SLAVE>(id, hostname, publicDns, resources, taskVec));
+	  send(master, pack<S2M_REREGISTER_SLAVE>(id, hostname, webuiUrl, resources, taskVec));
 	}
 	break;
       }

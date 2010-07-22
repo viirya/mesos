@@ -43,7 +43,7 @@ void *runSlaveWebUI(void* webuiPort)
 
 void startSlaveWebUI(const PID &slave, char* webuiPort)
 {
-  LOG(INFO) << "Starting slave web UI";
+  LOG(INFO) << "Starting slave web UI on port " << webuiPort;
   ::slave = slave;
   pthread_t thread;
   pthread_create(&thread, 0, runSlaveWebUI, webuiPort);

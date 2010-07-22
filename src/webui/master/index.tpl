@@ -22,34 +22,38 @@
 <script type="text/javascript" src="/yui_2.8.1/build/json/json-min.js"></script>
 
 <script type='text/javascript'>
-//Copied from http://developer.yahoo.com/yui/examples/datatable/dt_xhrjson.html
-
 // Custom parser 
 var timestampToDate = function(sTimestamp) { 
-    //convert from microseconds to milliseconds
-    return new Date(sTimestamp/1000); 
+  //convert from microseconds to milliseconds
+  return new Date(sTimestamp/1000); 
 }; 
 
 //SETUP FRAMEWORKS TABLE
 YAHOO.util.Event.addListener(window, "load", function() {
   YAHOO.example.XHR_JSON = new function() {
-
-
     // Override the built-in formatter
-    YAHOO.widget.DataTable.formatLink = function(elLiner, oRecord, oColumn, oData) {
-       var fwid = oData;
-       elLiner.innerHTML = "<a href=\"framework/" + fwid + "\">" + fwid + "</a>";
+    YAHOO.widget.DataTable.formatLink = function(elLiner, oRecord, 
+                                                 oColumn, oData)
+    {
+      var fwid = oData;
+      elLiner.innerHTML = "<a href=\"framework/" + fwid 
+                        + "\">" + fwid + "</a>";
     };
 
     var formatTime = function(elLiner, oRecord, oColumn, oData) {
-       var mydate = oData;
-       elLiner.innerHTML = (mydate.getMonth()+1).toString() + "/" + mydate.getDate() + "/" + mydate.getFullYear() + " " + mydate.getHours() + ":" + mydate.getMinutes() + ":" + mydate.getSeconds() + ":" + mydate.getMilliseconds();
+      var mydate = oData;
+      elLiner.innerHTML = (mydate.getMonth()+1).toString() + "/" 
+      + mydate.getDate() + "/" + mydate.getFullYear() + " " 
+      + mydate.getHours() + ":" + mydate.getMinutes() + ":" 
+      + mydate.getSeconds() + ":" + mydate.getMilliseconds();
     };
 
     var myColumnDefs = [
-        {key:"fwid", label:"FW ID", sortable:true, formatter:YAHOO.widget.DataTable.formatLink},
-        {key:"user", label:"User", sortable:true},
-        {key:"datetime_registered", label:"Date-time created", sortable:true, formatter:formatTime} 
+      {key:"fwid", label:"FW ID", sortable:true, 
+          formatter:YAHOO.widget.DataTable.formatLink},
+      {key:"user", label:"User", sortable:true},
+      {key:"datetime_registered", label:"Date-time created", sortable:true, 
+          formatter:formatTime} 
     ];
      
     // DataSource instance
@@ -57,30 +61,34 @@ YAHOO.util.Event.addListener(window, "load", function() {
     myFwDataSource.responseType = YAHOO.util.DataSource.TYPE_JSON;
     myFwDataSource.connXhrMode = "queueRequests";
     myFwDataSource.responseSchema = {
-        resultsList: "ResultSet.Items",
-        fields: ["fwid","user",{key:"datetime_registered",parser:timestampToDate}]
+      resultsList: "ResultSet.Items",
+      fields: ["fwid","user",{key:"datetime_registered",
+          parser:timestampToDate}]
     };
 
     // DataTable configurations
     var myConfig = {
       // Create the Paginator
       paginator: new YAHOO.widget.Paginator({
-          template : "{PreviousPageLink} {CurrentPageReport} {NextPageLink} {RowsPerPageDropdown}",
-          pageReportTemplate : "Showing items {startIndex} - {endIndex} of {totalRecords}",
-          rowsPerPage: 20,
-          rowsPerPageOptions: [20,50,100,200,500]
-      })
+        template : "{PreviousPageLink} {CurrentPageReport} "
+                 + "{NextPageLink} {RowsPerPageDropdown}",
+        pageReportTemplate : "Showing items {startIndex} - {endIndex} of "
+                           + "{totalRecords}",
+        rowsPerPage: 20,
+        rowsPerPageOptions: [20,50,100,200,500]
+      }),
+      sortedBy:{key:"datetime_registered", dir:"desc"}
     }; 
 
     this.myDataTable = new YAHOO.widget.DataTable("frameworks_table",
-             myColumnDefs, myFwDataSource, myConfig);
+        myColumnDefs, myFwDataSource, myConfig);
   };
 });
 </script>
 
 <link rel="stylesheet" type="text/css" href="/static/stylesheet.css" />
 </head>
-<body>
+<body class="yui-skin-sam">
 
 <h1>Nexus Master on {{HOSTNAME}}</h1>
 
@@ -193,7 +201,7 @@ Idle: {{idle_cpus}} CPUs, {{format_mem(idle_mem)}} MEM<br />
   %for s in master.slaves:
     <tr>
     <td>{{s.id}}</td>
-    <td><a href="http://{{s.public_dns}}:8081/">{{s.public_dns}}</a></td>
+    <td><a href="http://{{s.webuiUrl}}">{{s.webuiUrl}}</a></td>
     <td>{{s.cpus}}</td>
     <td>{{format_mem(s.mem)}}</td>
     <td>{{format_time(s.connect_time)}}</td>
