@@ -34,7 +34,7 @@
 #include "task.hpp"
 
 
-namespace nexus { namespace internal { namespace master {
+namespace mesos { namespace internal { namespace master {
 
 using std::make_pair;
 using std::map;
@@ -46,9 +46,9 @@ using std::vector;
 using boost::unordered_map;
 using boost::unordered_set;
 
-using namespace nexus;
-using namespace nexus::internal;
-using nexus::internal::eventhistory::EventLogger;
+using namespace mesos;
+using namespace mesos::internal;
+using mesos::internal::eventhistory::EventLogger;
 
 
 // Maximum number of slot offers to have outstanding for each framework.

@@ -6,7 +6,7 @@
 %master = get_master()
 <html>
 <head>
-<title>Nexus Master on {{HOSTNAME}}</title>
+<title>Mesos Master on {{HOSTNAME}}</title>
 <!-- Combo-handled YUI CSS files: -->
 <link rel="stylesheet" type="text/css" href="/yui_2.8.1/build/paginator/assets/skins/sam/paginator.css">
 <link rel="stylesheet" type="text/css" href="/yui_2.8.1/build/datatable/assets/skins/sam/datatable.css">
@@ -90,7 +90,7 @@ YAHOO.util.Event.addListener(window, "load", function() {
 </head>
 <body class="yui-skin-sam">
 
-<h1>Nexus Master on {{HOSTNAME}}</h1>
+<h1>Mesos Master on {{HOSTNAME}}</h1>
 
 <p>
 Built: {{master.build_date}} by {{master.build_user}}<br />

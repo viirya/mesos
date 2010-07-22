@@ -22,9 +22,9 @@ using boost::lexical_cast;
 using boost::unordered_map;
 using boost::unordered_set;
 
-using namespace nexus;
-using namespace nexus::internal;
-using namespace nexus::internal::slave;
+using namespace mesos;
+using namespace mesos::internal;
+using namespace mesos::internal::slave;
 
 
 namespace {
@@ -136,19 +136,18 @@ void Slave::operator () ()
   const char *hostname = he->h_name;
 
   // Get our webui URL. Normally this is our hostname, but on EC2
-  // we look for the NEXUS_PUBLIC_DNS environment variable. This allows
+  // we look for the MESOS_PUBLIC_DNS environment variable. This allows
   // the master to display our public name in its web UI. Must include port#.
   LOG(INFO) << "setting up webuiUrl on port " << conf["webui_port"];
-  const char* publicDns = getenv("NEXUS_PUBLIC_DNS");
+  const char* publicDns = getenv("MESOS_PUBLIC_DNS");
   string webuiUrl;
   if (publicDns != NULL)
     webuiUrl = publicDns;
   else
     webuiUrl = hostname;
-#ifdef NEXUS_WEBUI
+#ifdef MESOS_WEBUI
   webuiUrl += ":" + conf["webui_port"];
 #endif
-  LOG(INFO) << "webuiUrl setup in slave.cpp as " << webuiUrl << endl;
 
   // Initialize isolation module.
   isolationModule->initialize(this);

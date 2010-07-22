@@ -3,8 +3,8 @@
 #include "event_history.hpp"
 #include <sys/stat.h>
 
-using nexus::FrameworkID;
-using namespace nexus::internal::eventhistory;
+using mesos::FrameworkID;
+using namespace mesos::internal::eventhistory;
 
 EventLogger evLogger = EventLogger();
 
