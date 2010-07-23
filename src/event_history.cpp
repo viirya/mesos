@@ -7,7 +7,7 @@
 
 #include <glog/logging.h>
 
-using namespace nexus::internal::eventhistory;
+using namespace mesos::internal::eventhistory;
 
 //returns the current time in microseconds
 long getTimeStamp(){

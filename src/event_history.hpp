@@ -1,7 +1,7 @@
 #ifndef __EVENT_HISTORY_HPP__
 #define __EVENT_HISTORY_HPP__
 
-#include "nexus.hpp"
+#include "mesos.hpp"
 #include "resources.hpp"
 #include <iostream>
 #include <string>
@@ -11,21 +11,21 @@
 #include <ctime>
 #include <sqlite3.h>
 
-namespace nexus { namespace internal { namespace eventhistory {
+namespace mesos { namespace internal { namespace eventhistory {
 
 using namespace std;
-using nexus::FrameworkID;
-using nexus::TaskID;
-using nexus::SlaveID;
-using nexus::FrameworkID;
-using nexus::TaskState;
-using nexus::internal::Resources;
+using mesos::FrameworkID;
+using mesos::TaskID;
+using mesos::SlaveID;
+using mesos::FrameworkID;
+using mesos::TaskState;
+using mesos::internal::Resources;
 
 class EventWriter {
 public:
   virtual ~EventWriter() {}
   virtual string getName() = 0;
-  virtual int logTaskCreated(TaskID, FrameworkID, SlaveID, string webuiUrl, Resources) = 0;
+  virtual int logTaskCreated(TaskID, FrameworkID, SlaveID, string sHostname, Resources) = 0;
   virtual int logTaskStateUpdated(TaskID, FrameworkID, TaskState) = 0; 
   virtual int logFrameworkRegistered(FrameworkID, string) = 0;
   virtual int logFrameworkUnregistered(FrameworkID) = 0;
@@ -40,7 +40,7 @@ public:
   string getName();
   FileEventWriter(); 
   ~FileEventWriter();
-  int logTaskCreated(TaskID, FrameworkID, SlaveID, string webuiUrl, Resources);
+  int logTaskCreated(TaskID, FrameworkID, SlaveID, string sHostname, Resources);
   int logTaskStateUpdated(TaskID, FrameworkID, TaskState); 
   int logFrameworkRegistered(FrameworkID, string);
   int logFrameworkUnregistered(FrameworkID);
@@ -56,7 +56,7 @@ public:
   string getName();
   SqlLiteEventWriter(); 
   ~SqlLiteEventWriter();
-  int logTaskCreated(TaskID, FrameworkID, SlaveID, string webuiUrl, Resources);
+  int logTaskCreated(TaskID, FrameworkID, SlaveID, string sHostname, Resources);
   int logTaskStateUpdated(TaskID, FrameworkID, TaskState); 
   int logFrameworkRegistered(FrameworkID, string);
   int logFrameworkUnregistered(FrameworkID);
@@ -70,7 +70,7 @@ public:
   EventLogger(); 
   ~EventLogger();
   int logResourceOffer(FrameworkID, Resources);
-  int logTaskCreated(TaskID, FrameworkID, SlaveID, string webuiUrl, Resources);
+  int logTaskCreated(TaskID, FrameworkID, SlaveID, string sHostname, Resources);
   int logTaskStateUpdated(TaskID, FrameworkID, TaskState); 
   int logFrameworkRegistered(FrameworkID, string);
   int logFrameworkUnregistered(FrameworkID);
