@@ -6,11 +6,11 @@
 using mesos::FrameworkID;
 using namespace mesos::internal::eventhistory;
 
-EventLogger evLogger = EventLogger();
-
 TEST(EventHistoryTest, logFrameworkRegistered)
 {
   ASSERT_TRUE(GTEST_IS_THREADSAFE);
+
+  EventLogger evLogger;
   FrameworkID fid = "MasterID-FrameworkID";
   evLogger.logFrameworkRegistered(fid, "UserID");
   // make sure log file, and sqlite3 db were created
