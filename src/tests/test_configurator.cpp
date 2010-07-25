@@ -41,16 +41,18 @@ TEST(ConfiguratorTest, DefaultOptions)
 
   Configurator conf;
 
-  EXPECT_NO_THROW( {
-      conf.addOption<int>("test1", "Testing option", 500);
-      conf.addOption<short>("test2", "Another tester", 0);
-      conf.addOption<long>("test3", "Tests the default", 2010);
-      conf.addOption<string>("test4", "Option without default");
-      conf.addOption<string>("test5", "Option with a default", "arb");
-      conf.load(ARGC, argv, false);
-    } );
+  
+  EXPECT_NO_THROW(conf.addOption<int>("test1", "Testing option", 500));
+  EXPECT_NO_THROW(conf.addOption<bool>("test2", "Another tester", 0));
+  EXPECT_NO_THROW(conf.addOption<long>("test3", "Tests the default", 2010));
+  EXPECT_NO_THROW(conf.addOption<string>("test4", "Option without default"));
+  EXPECT_NO_THROW(conf.addOption<string>("test5", "Option with a default", 
+                                         "arb"));
+  EXPECT_NO_THROW(conf.addOption<bool>("test6", "Toggler...", false));
+  EXPECT_NO_THROW(conf.addOption<bool>("test7", "Toggler...", true));
+  EXPECT_NO_THROW(conf.load(ARGC, argv, false));
 
-  conf.addOption<int>("excp", "Exception tester.", 50);
+  EXPECT_NO_THROW(conf.addOption<int>("excp", "Exception tester.", 50));
   EXPECT_THROW(conf.validate(), ConfigurationException);
   conf.getParams()["excp"] = "27";
   EXPECT_NO_THROW(conf.validate());
@@ -61,27 +63,35 @@ TEST(ConfiguratorTest, DefaultOptions)
   EXPECT_EQ("",       conf.getParams()["test4"]);
   EXPECT_EQ("arb",    conf.getParams()["test5"]);
   EXPECT_EQ("27",     conf.getParams()["excp"]);
+  EXPECT_EQ("0",      conf.getParams()["test6"]);
+  EXPECT_EQ("1",      conf.getParams()["test7"]);
 }
 
 
 TEST(ConfiguratorTest, CommandLine)
 {
-  const int ARGC = 8;
+  const int ARGC = 12;
   char* argv[ARGC];
-  argv[0] = (char*) "./filename";
-  argv[1] = (char*) "--test1=text1";
-  argv[2] = (char*) "--test2";
-  argv[3] = (char*) "text2";
-  argv[4] = (char*) "-N";
-  argv[5] = (char*) "-25";
-  argv[6] = (char*) "--cAsE=4";
-  argv[7] = (char*) "--space=Long String";
+  argv[0] =  (char*) "./filename";
+  argv[1] =  (char*) "--test1=text1";
+  argv[2] =  (char*) "--test2";
+  argv[3] =  (char*) "text2";
+  argv[4] =  (char*) "-N";
+  argv[5] =  (char*) "-25";
+  argv[6] =  (char*) "--cAsE=4";
+  argv[7] =  (char*) "--space=Long String";
+  argv[8] =  (char*) "--bool1";
+  argv[9] =  (char*) "--no-bool2";
+  argv[10] = (char*) "-a";
+  argv[11] = (char*) "-no-b";
 
   Configurator conf;
-  EXPECT_NO_THROW( {
-      conf.addOption<int>("negative", 'N', "some val", -30);
-      conf.addOption<string>("test1", "textual value", "text2");
-    } );
+  EXPECT_NO_THROW(conf.addOption<int>("negative", 'N', "some val", -30));
+  EXPECT_NO_THROW(conf.addOption<string>("test1", "textual value", "text2"));
+  EXPECT_NO_THROW(conf.addOption<bool>("bool1", "toggler", false));
+  EXPECT_NO_THROW(conf.addOption<bool>("bool2", 'z', "toggler", true));
+  EXPECT_NO_THROW(conf.addOption<bool>("bool3", 'a', "toggler", false));
+  EXPECT_NO_THROW(conf.addOption<bool>("bool4", 'b', "toggler", true));
 
   EXPECT_NO_THROW( conf.load(ARGC, argv, false) );
 
@@ -90,6 +100,10 @@ TEST(ConfiguratorTest, CommandLine)
   EXPECT_EQ("-25",         conf.getParams()["negative"]);
   EXPECT_EQ("4",           conf.getParams()["case"]);
   EXPECT_EQ("Long String", conf.getParams()["space"]);
+  EXPECT_EQ("1",           conf.getParams()["bool1"]);
+  EXPECT_EQ("0",           conf.getParams()["bool2"]);
+  EXPECT_EQ("1",           conf.getParams()["bool3"]);
+  EXPECT_EQ("0",           conf.getParams()["bool4"]);
 }
 
 
