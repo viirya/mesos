@@ -8,6 +8,4 @@ $bin/start-master
 
 $bin/start-slaves
 
-echo "Everything's started! You can view the master Web UI at"
-
-echo "      http://$MASTER:$MASTER_WEBUI_PORT"
+echo "Everything's started! You should be able to view the master Web UI"
