@@ -19,19 +19,13 @@ PID master;
 namespace mesos { namespace internal { namespace master {
 
 
-void *runMasterWebUI(void* params)
+void *runMasterWebUI(void* webuiPort)
 {
   LOG(INFO) << "Web UI thread started";
-  Params& myParams = static_cast<Params&>(*params);
-  LOG(INFO) << "got myParams wo crash";
-  LOG(INFO) << "WEBUI AGAIN IS: " << myParams["webui_port"].c_str();
-  LOG(INFO) << "LOG_DIR AGAIN IS: " << myParams["log_dir"].c_str();
-
   Py_Initialize();
   char* nargv[2]; 
   nargv[0] = const_cast<char*>("webui/master/webui.py");
-  nargv[1] = const_cast<char*>((reinterpret_cast<Params&>(params))["webui_port"].c_str());
-  nargv[2] = const_cast<char*>((reinterpret_cast<Params&>(params))["log_dir"].c_str());
+  nargv[1] = reinterpret_cast<char*>(webuiPort);
   PySys_SetArgv(2,nargv);
   PyRun_SimpleString("import sys\n"
       "sys.path.append('webui/master/swig')\n"
@@ -46,14 +40,12 @@ void *runMasterWebUI(void* params)
 }
 
 
-void startMasterWebUI(const PID &master, Params &params)
+void startMasterWebUI(const PID &master, char* webuiPort)
 {
-  LOG(INFO) << "WEBUI PORT IS: " << const_cast<char*>(params["webui_port"].c_str());
-  LOG(INFO) << "LOG_DIR IS: " << const_cast<char*>(params["log_dir"].c_str());
   LOG(INFO) << "Starting master web UI";
   ::master = master;
   pthread_t thread;
-  pthread_create(&thread, 0, runMasterWebUI, params);
+  pthread_create(&thread, 0, runMasterWebUI, webuiPort);
 }
 
 

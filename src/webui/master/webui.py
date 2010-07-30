@@ -150,17 +150,9 @@ def frameworks_json():
   response.header['Content-Type'] = 'text/plain' 
   return str(json_string)
 
-@route('/logdir')
-def logdir():
-  return log_dir
-
 bottle.TEMPLATE_PATH.append('./webui/master/%s.tpl')
 if sys.argv[1]:
   webui_port = sys.argv[1] 
 else:
   webui_port = 8080
-if sys.argv[2]:
-  log_dir = sys.argv[2] 
-else:
-  log_dir = "/tmp" 
 bottle.run(host = '0.0.0.0', port = webui_port)
