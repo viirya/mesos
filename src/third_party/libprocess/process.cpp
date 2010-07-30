@@ -1304,8 +1304,8 @@ void initialize()
 
   if (value != NULL) {
     if (inet_pton(AF_INET, value, &ip) <= 0)
-      fatalerror("failed to initialize ip address from environment variable "
-                +"LIBPROCESS_IP (unparseable ip address: '%s')", value);
+      fatalerror("failed to initialize ip address from environment variable \ 
+                  LIBPROCESS_IP (unparseable ip address: '%s')", value);
   } else {
     ip = 0;
   }
