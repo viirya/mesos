@@ -7,38 +7,21 @@
 
 #include <sys/time.h>
 
-#include <iostream>
-#include <map>
 #include <queue>
-#include <string>
-#include <utility>
 
 #include <tr1/functional>
 
+#include "pid.hpp"
+
+
 typedef uint16_t MSGID;
+
 
 const MSGID PROCESS_ERROR = 0;
 const MSGID PROCESS_TIMEOUT = 1;
 const MSGID PROCESS_EXIT = 2;
 const MSGID PROCESS_MSGID = PROCESS_EXIT+1;
 
-typedef struct PID
-{
-  uint32_t pipe;
-  uint32_t ip;
-  uint16_t port;
-
-  operator std::string() const;
-  bool operator ! () const;
-} PID;
-
-std::ostream& operator << (std::ostream& stream, const PID& pid);
-std::istream& operator >> (std::istream& stream, PID& pid);
-
-bool operator < (const PID &left, const PID &right);
-bool operator == (const PID &left, const PID &right);
-
-PID make_pid(const char *);
 
 struct msg
 {
@@ -48,12 +31,14 @@ struct msg
   uint32_t len;
 };
 
+
 class ProcessClock {
 public:
   static void pause();
   static void resume();
   static void advance(double secs);
 };
+
 
 class MessageFilter {
 public:
@@ -63,10 +48,8 @@ public:
 
 class Process {
 public:
-  virtual ~Process();
-
   /* Returns pid of process; valid even before calling spawn. */
-  PID getPID() const;
+  PID self() const;
 
   /* Sends a message to PID without a return address. */
   static void post(const PID &to, MSGID id);
@@ -80,9 +63,6 @@ public:
   /* Wait for PID to exit (returns true if actually waited on a process). */
   static bool wait(const PID &pid);
 
-  /* Wait for PID to exit (returns true if actually waited on a process). */
-  static bool wait(Process *process);
-
   /* Invoke the thunk in a legacy safe way. */
   static void invoke(const std::tr1::function<void (void)> &thunk);
 
@@ -91,17 +71,15 @@ public:
 
 protected:
   Process();
+  virtual ~Process();
 
   /* Function run when process spawned. */
   virtual void operator() () = 0;
 
-  /* Returns the PID describing this process. */
-  PID self() const;
-
   /* Returns the sender's PID of the last dequeued (current) message. */
   PID from() const;
 
-  /* Returns the id of the current message. */
+  /* Returns the id of the last dequeued (current) message. */
   MSGID msgid() const;
 
   /* Returns pointer and length of body of last dequeued (current) message. */
@@ -202,6 +180,18 @@ private:
 };
 
 
+inline PID Process::self() const
+{
+  return pid;
+}
+
+
+inline PID Process::from() const
+{
+  return current != NULL ? current->from : PID();
+}
+
+
 inline MSGID Process::msgid() const
 {
   return current != NULL ? current->id : PROCESS_ERROR;
@@ -230,12 +220,6 @@ inline MSGID Process::call(const PID &to, MSGID id,
 inline MSGID Process::receive()
 {
   return receive(0);
-}
-
-
-inline PID Process::getPID() const
-{
-  return self();
 }
 
 

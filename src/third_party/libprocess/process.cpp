@@ -38,6 +38,7 @@
 #include <stack>
 #include <stdexcept>
 
+#include "config.hpp"
 #include "fatal.hpp"
 #include "foreach.hpp"
 #include "gate.hpp"
@@ -57,35 +58,6 @@ using std::ostream;
 using std::queue;
 using std::set;
 using std::stack;
-
-
-#ifdef __sun__
-#define gethostbyname2(name, _) gethostbyname(name)
-#ifndef MSG_NOSIGNAL
-#define MSG_NOSIGNAL 0
-#endif
-#ifndef SOL_TCP
-#define SOL_TCP IPPROTO_TCP
-#endif
-#ifndef MAP_32BIT
-#define MAP_32BIT 0
-#endif
-#endif /* __sun__ */
-
-#ifdef __APPLE__
-#ifndef MAP_ANONYMOUS
-#define MAP_ANONYMOUS MAP_ANON
-#endif
-#ifndef MSG_NOSIGNAL
-#define MSG_NOSIGNAL 0
-#endif
-#ifndef SOL_TCP
-#define SOL_TCP IPPROTO_TCP
-#endif
-#ifndef MAP_32BIT
-#define MAP_32BIT 0
-#endif
-#endif /* __APPLE__ */
 
 
 #define Byte (1)
@@ -196,7 +168,7 @@ public:
     return process;
   }
 
-  operator bool ()
+  operator bool () const
   {
     return process != NULL;
   }
@@ -471,97 +443,6 @@ static map<uint32_t, deque<uint32_t> > *replay_pipes =
 static MessageFilter *filterer = NULL;
 static synchronizable(filterer) = SYNCHRONIZED_INITIALIZER_RECURSIVE;
 
-
-PID make_pid(const char *str)
-{
-  PID pid = { 0 };
-  std::istringstream iss(str);
-  iss >> pid;
-  return pid;
-}
-
-
-PID::operator std::string() const
-{
-  std::ostringstream oss;
-  oss << *this;
-  return oss.str();
-}
-
-
-bool PID::operator ! () const
-{
-  return !pipe && !ip && !port;
-}
-
-
-std::ostream& operator << (std::ostream& stream, const PID& pid)
-{
-  /* Call inet_ntop since inet_ntoa is not thread-safe! */
-  char ip[INET_ADDRSTRLEN];
-  if (inet_ntop(AF_INET, (in_addr *) &pid.ip, ip, INET_ADDRSTRLEN) == NULL)
-    memset(ip, 0, INET_ADDRSTRLEN);
-
-  stream << pid.pipe << "@" << ip << ":" << pid.port;
-  return stream;
-}
-
-
-std::istream& operator >> (std::istream& stream, PID& pid)
-{
-  pid.pipe = 0;
-  pid.ip = 0;
-  pid.port = 0;
-
-  std::string str;
-  if (!(stream >> str)) {
-    stream.setstate(std::ios_base::badbit);
-    return stream;
-  }
-
-  if (str.size() > 500) {
-    stream.setstate(std::ios_base::badbit);
-    return stream;
-  }
-
-  char host[512];
-  int id;
-  unsigned short port;
-  if (sscanf(str.c_str(), "%d@%[^:]:%hu", &id, host, &port) != 3) {
-    stream.setstate(std::ios_base::badbit);
-    return stream;
-  }
-
-  hostent *he = gethostbyname2(host, AF_INET);
-  if (!he) {
-    stream.setstate(std::ios_base::badbit);
-    return stream;
-  }
-
-  pid.pipe = id;
-  pid.ip = *((uint32_t *) he->h_addr);
-  pid.port = port;
-  return stream;
-}
-
-
-bool operator < (const PID& left, const PID& right)
-{
-  if (left.ip == right.ip && left.port == right.port)
-    return left.pipe < right.pipe;
-  else if (left.ip == right.ip && left.port != right.port)
-    return left.port < right.port;
-  else
-    return left.ip < right.ip;
-}
-
-
-bool operator == (const PID& left, const PID& right)
-{
-  return (left.pipe == right.pipe &&
-	  left.ip == right.ip &&
-	  left.port == right.port);
-}
 
 
 int set_nbio(int fd)
@@ -1297,22 +1178,31 @@ void initialize()
   if (pthread_create (&proc_thread, NULL, schedule, NULL) != 0)
     fatalerror("failed to initialize (pthread_create)");
 
+  ip = 0;
+  port = 0;
+
   char *value;
 
-  /* Check environment for ip address. */
+  /* Check environment for ip. */
   value = getenv("LIBPROCESS_IP");
-
   if (value != NULL) {
-    if (inet_pton(AF_INET, value, &ip) <= 0)
-      fatalerror("failed to initialize ip address from environment variable \ 
-                  LIBPROCESS_IP (unparseable ip address: '%s')", value);
-  } else {
-    ip = 0;
+    int result = inet_pton(AF_INET, value, &ip);
+    if (result == 0) {
+      fatal("LIBPROCESS_IP=%s was unparseable", value);
+    } else if (result < 0) {
+      fatalerror("failed to initialize (inet_pton)");
+    }
   }
 
   /* Check environment for port. */
   value = getenv("LIBPROCESS_PORT");
-  port = value != NULL ? atoi(value) : 0;
+  if (value != NULL) {
+    int result = atoi(value);
+    if (result < 0 || result > USHRT_MAX) {
+      fatal("LIBPROCESS_PORT=%s is not a valid port", value);
+    }
+    port = result;
+  }
 
   /* Check environment for replay. */
   value = getenv("LIBPROCESS_REPLAY");
@@ -1749,7 +1639,7 @@ void LinkManager::exited(Process *process)
     foreachpair (_, set<Process *> &processes, links)
       processes.erase(process);
 
-    const PID &pid = process->getPID();
+    const PID &pid = process->self();
 
     /* Look up all linked processes. */
     map<PID, set<Process *> >::iterator it = links.find(pid);
@@ -1785,7 +1675,9 @@ ProcessManager::ProcessManager()
   synchronizer(runq) = SYNCHRONIZED_INITIALIZER;
 }
 
+
 ProcessManager::~ProcessManager() {}
+
 
 ProcessReference ProcessManager::use(const PID &pid)
 {
@@ -2638,22 +2530,12 @@ struct msg * Process::dequeue()
 }
 
 
-PID Process::self() const
-{
-  return pid;
-}
-
-
-PID Process::from() const
-{
-  PID pid = { 0, 0, 0 };
-  return current != NULL ? current->from : pid;
-}
-
-
 void Process::inject(const PID &from, MSGID id, const char *data, size_t length)
 {
   if (replaying)
+    return;
+
+  if (!from)
     return;
 
   /* Disallow sending messages using an internal id. */
@@ -2695,6 +2577,9 @@ void Process::inject(const PID &from, MSGID id, const char *data, size_t length)
 void Process::send(const PID &to, MSGID id, const char *data, size_t length)
 {
   if (replaying)
+    return;
+
+  if (!to)
     return;
   
   /* Disallow sending messages using an internal id. */
@@ -2827,7 +2712,11 @@ void Process::pause(double secs)
 
 PID Process::link(const PID &to)
 {
+  if (!to)
+    return to;
+
   process_manager->link(this, to);
+
   return to;
 }
 
@@ -2906,6 +2795,9 @@ void Process::post(const PID &to, MSGID id, const char *data, size_t length)
   if (replaying)
     return;
 
+  if (!to)
+    return;
+
   /* Disallow sending messages using an internal id. */
   if (id < PROCESS_MSGID)
     return;
@@ -2955,8 +2847,7 @@ PID Process::spawn(Process *process)
     process_manager->spawn(process);
     return process->pid;
   } else {
-    PID pid = { 0, 0, 0 };
-    return pid;
+    return PID();
   }
 }
 
@@ -2964,6 +2855,9 @@ PID Process::spawn(Process *process)
 bool Process::wait(const PID &pid)
 {
   initialize();
+
+  if (!pid)
+    return false;
 
   // N.B. This could result in a deadlock! We could check if such was
   // the case by doing:
@@ -2981,15 +2875,6 @@ bool Process::wait(const PID &pid)
     return process_manager->external_wait(pid);
   else
     return process_manager->wait(proc_process, pid);
-}
-
-
-bool Process::wait(Process *process)
-{
-  if (process == NULL)
-    return false;
-
-  return wait(process->getPID());
 }
 
 

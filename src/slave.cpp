@@ -196,7 +196,7 @@ void Slave::operator () ()
 	double interval = 0;
         unpack<M2S_REGISTER_REPLY>(this->id, interval);
         LOG(INFO) << "Registered with master; given slave ID " << this->id;
-        link(spawn(new Heart(master, this->getPID(), this->id, interval)));
+        link(spawn(new Heart(master, self(), this->id, interval)));
         break;
       }
       
@@ -207,7 +207,7 @@ void Slave::operator () ()
         LOG(INFO) << "RE-registered with master; given slave ID " << tmpfid << " had "<< this->id;
         if (this->id == "")
           this->id = tmpfid;
-        link(spawn(new Heart(master, getPID(), this->id, interval)));
+        link(spawn(new Heart(master, self(), this->id, interval)));
         break;
       }
       
@@ -226,7 +226,7 @@ void Slave::operator () ()
         Framework *framework = getFramework(fid);
         if (framework == NULL) {
           // Framework not yet created on this node - create it
-          PID fwPid = make_pid(fwPidStr.c_str());
+          PID fwPid(fwPidStr);
           if (!fwPid) {
             LOG(ERROR) << "Couldn't create PID out of framework PID string";
           }

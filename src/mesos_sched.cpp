@@ -21,7 +21,6 @@
 #include "mesos_sched.h"
 
 #include "fatal.hpp"
-#include "hash_pid.hpp"
 #include "lock.hpp"
 #include "logging.hpp"
 #include "master_detector.hpp"
@@ -285,8 +284,8 @@ protected:
 	unordered_map <TaskID, RbReply *>::iterator it = rbReplies.find(tid);
 	if (it != rbReplies.end()) {
 	  RbReply *rr = it->second;
-	  send(rr->getPID(), pack<F2F_TASK_RUNNING_STATUS>());
-	  wait(rr->getPID());
+	  send(rr->self(), pack<F2F_TASK_RUNNING_STATUS>());
+	  wait(rr->self());
 	  rbReplies.erase(tid);
 	  delete rr;
 	}
@@ -305,8 +304,8 @@ protected:
 	unordered_map <TaskID, RbReply *>::iterator it = rbReplies.find(tid);
 	if (it != rbReplies.end()) {
 	  RbReply *rr = it->second;
-	  send(rr->getPID(), pack<F2F_TASK_RUNNING_STATUS>());
-	  wait(rr->getPID());
+	  send(rr->self(), pack<F2F_TASK_RUNNING_STATUS>());
+	  wait(rr->self());
 	  rbReplies.erase(tid);
 	  delete rr;
 	}
@@ -503,7 +502,7 @@ MesosSchedulerDriver::~MesosSchedulerDriver()
   // not this was about to be deadlock, and possibly report this back
   // to the user somehow.
   if (process != NULL) {
-    Process::wait(process);
+    Process::wait(process->self());
     delete process;
   }
 

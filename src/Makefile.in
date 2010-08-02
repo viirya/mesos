@@ -20,7 +20,8 @@ RUBY_HEADERS = @RUBY_HEADERS@
 WITH_WEBUI = @WITH_WEBUI@
 WEBUI_FLAGS = @WEBUI_FLAGS@
 
-LOCAL_ZOOKEEPER = @LOCAL_ZOOKEEPER@
+WITH_ZOOKEEPER = @WITH_ZOOKEEPER@
+WITH_INCLUDED_ZOOKEEPER = @WITH_INCLUDED_ZOOKEEPER@
 
 LIBEV = third_party/libprocess/third_party/libev-3.8
 
@@ -59,8 +60,8 @@ LDFLAGS += -L$(LIBEV)/.libs
 CXXFLAGS += -I$(GLOG)/src -I$(GTEST)/include -I$(SQLITE)/
 LDFLAGS += -L$(GLOG)/.libs -L$(GTEST)/lib/.libs -L$(SQLITE)/.libs
 
-# Add local ZooKeeper to include and lib paths if necessary.
-ifeq ($(LOCAL_ZOOKEEPER),yes)
+# Add included ZooKeeper to include and lib paths if necessary.
+ifeq ($(WITH_INCLUDED_ZOOKEEPER),yes)
   CXXFLAGS += -I$(ZOOKEEPER)/include -I$(ZOOKEEPER)/generated
   LDFLAGS += -L$(ZOOKEEPER)/.libs
 endif
@@ -81,7 +82,12 @@ CXXFLAGS += -DBUILD_USER="\"$$USER\""
 LDFLAGS += -L$(LIBEV)/.libs
 
 # Add libev, libprocess, pthread, and dl to LIBS.
-LIBS += -lglog -lgtest -lprocess -lev -lpthread -ldl -lzookeeper_st -lsqlite3
+LIBS += -lglog -lgtest -lprocess -lev -lpthread -ldl -lsqlite3
+
+# Add ZooKeeper if necessary.
+ifeq ($(WITH_ZOOKEEPER),yes)
+  LIBS += -lzookeeper_st
+endif
 
 MESOS_EXES = mesos-master mesos-slave mesos-local mesos-launcher \
              test-framework test-executor cpp-test-framework \
@@ -101,17 +107,21 @@ MESOS_LIB = libmesos++.a
 MESOS_LIBS = $(SCHED_LIB) $(EXEC_LIB) $(MESOS_LIB)
 
 MASTER_OBJ = master.o allocator_factory.o simple_allocator.o
+
 SLAVE_OBJ = slave.o launcher.o isolation_module.o \
 	    process_based_isolation_module.o
-COMMON_OBJ = fatal.o hash_pid.o messages.o lock.o master_detector.o \
-	     url_processor.o zookeeper.o configurator.o string_utils.o \
-	     logging.o event_history.o
+
+COMMON_OBJ = fatal.o messages.o lock.o master_detector.o \
+	     url_processor.o configurator.o string_utils.o logging.o event_history.o
+
 EXEC_LIB_OBJ = mesos_exec.o
+
 SCHED_LIB_OBJ = mesos_sched.o mesos_local.o params.o
-TEST_OBJ = tests/main.o tests/test_master.o tests/test_resources.o \
-	   tests/external_test.o tests/test_sample_frameworks.o \
-	   tests/testing_utils.o tests/test_configurator.o \
-	   tests/test_string_utils.o tests/test_lxc_isolation.o \
+
+TEST_OBJ = tests/main.o tests/test_master.o tests/test_resources.o  \
+	   tests/external_test.o tests/test_sample_frameworks.o           \
+	   tests/testing_utils.o tests/test_configurator.o                \
+	   tests/test_string_utils.o tests/test_lxc_isolation.o           \
 	   tests/test_event_history.o
 
 ifeq ($(OS_NAME),solaris)
@@ -120,6 +130,10 @@ endif
 
 ifeq ($(OS_NAME),linux)
   SLAVE_OBJ += lxc_isolation_module.o
+endif
+
+ifeq ($(WITH_ZOOKEEPER),yes)
+  COMMON_OBJ += zookeeper.o
 endif
 
 ALL_OBJ = $(MASTER_OBJ) $(SLAVE_OBJ) $(COMMON_OBJ) \
@@ -290,7 +304,7 @@ third_party:
 	$(MAKE) -C $(GLOG)
 	$(MAKE) -C $(GTEST)
 	$(MAKE) -C $(SQLITE)
-ifeq ($(LOCAL_ZOOKEEPER),yes)
+ifeq ($(WITH_INCLUDED_ZOOKEEPER),yes)
 	$(MAKE) -C $(ZOOKEEPER)
 endif
 
@@ -301,7 +315,7 @@ clean:
 	$(MAKE) -C $(GLOG) clean
 	$(MAKE) -C $(GTEST) clean
 	$(MAKE) -C $(SQLITE) clean
-ifeq ($(LOCAL_ZOOKEEPER),yes)
+ifeq ($(WITH_INCLUDED_ZOOKEEPER),yes)
 	$(MAKE) -C $(ZOOKEEPER) clean
 endif
 	rm -f $(patsubst %.o, %.d, $(ALL_OBJ))

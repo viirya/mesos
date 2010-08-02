@@ -181,7 +181,7 @@ MesosExecutorDriver::~MesosExecutorDriver()
   pthread_mutex_destroy(&mutex);
   pthread_cond_destroy(&cond);
 
-  Process::wait(process);
+  Process::wait(process->self());
   delete process;
 }
 
@@ -221,7 +221,7 @@ int MesosExecutorDriver::start()
   if (value == NULL)
     fatal("expecting MESOS_SLAVE_PID in environment");
 
-  slave = make_pid(value);
+  slave = PID(value);
 
   if (!slave)
     fatal("cannot parse MESOS_SLAVE_PID");
