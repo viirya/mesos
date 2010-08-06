@@ -1,7 +1,7 @@
 #include <sstream>
 
-#include "master_webui.hpp"
 #include "master_state.hpp"
+#include "master_webui.hpp"
 
 #ifdef MESOS_WEBUI
 
@@ -18,21 +18,26 @@ PID master;
 
 namespace mesos { namespace internal { namespace master {
 
+using namespace std;
 
-void *runMasterWebUI(void* params)
+struct webuiArgs {
+  string webuiPort;
+  string logDir;
+} myWebuiArgs; 
+
+
+void *runMasterWebUI(void *)
 {
   LOG(INFO) << "Web UI thread started";
-  Params& myParams = static_cast<Params&>(*params);
-  LOG(INFO) << "got myParams wo crash";
-  LOG(INFO) << "WEBUI AGAIN IS: " << myParams["webui_port"].c_str();
-  LOG(INFO) << "LOG_DIR AGAIN IS: " << myParams["log_dir"].c_str();
+  LOG(INFO) << "WEBUI AGAIN IS: " << myWebuiArgs.webuiPort;
+  LOG(INFO) << "LOG_DIR AGAIN IS: " << myWebuiArgs.logDir;
 
   Py_Initialize();
-  char* nargv[2]; 
+  char* nargv[3]; 
   nargv[0] = const_cast<char*>("webui/master/webui.py");
-  nargv[1] = const_cast<char*>((reinterpret_cast<Params&>(params))["webui_port"].c_str());
-  nargv[2] = const_cast<char*>((reinterpret_cast<Params&>(params))["log_dir"].c_str());
-  PySys_SetArgv(2,nargv);
+  nargv[1] = const_cast<char*>(myWebuiArgs.webuiPort.c_str());
+  nargv[2] = const_cast<char*>(myWebuiArgs.logDir.c_str());
+  PySys_SetArgv(3,nargv);
   PyRun_SimpleString("import sys\n"
       "sys.path.append('webui/master/swig')\n"
       "sys.path.append('webui/common')\n"
@@ -46,14 +51,15 @@ void *runMasterWebUI(void* params)
 }
 
 
-void startMasterWebUI(const PID &master, Params &params)
+void startMasterWebUI(const PID &master, const Params& params)
 {
-  LOG(INFO) << "WEBUI PORT IS: " << const_cast<char*>(params["webui_port"].c_str());
-  LOG(INFO) << "LOG_DIR IS: " << const_cast<char*>(params["log_dir"].c_str());
-  LOG(INFO) << "Starting master web UI";
+  myWebuiArgs.webuiPort = params.get("webui_port","8080");
+  myWebuiArgs.logDir = params.get("log_dir","/tmp");
+  LOG(INFO) << "Starting master web UI on port " << myWebuiArgs.webuiPort 
+            << ", using log_dir " << myWebuiArgs.logDir;
   ::master = master;
   pthread_t thread;
-  pthread_create(&thread, 0, runMasterWebUI, params);
+  pthread_create(&thread, 0, runMasterWebUI, NULL);
 }
 
 
@@ -71,8 +77,8 @@ public:
   {
     send(::master, pack<M2M_GET_STATE>());
     receive();
-    CHECK(msgid() == M2M_GET_STATE_REPLY);
-    unpack<M2M_GET_STATE_REPLY>(*((intptr_t *) &masterState));
+    int64_t *i = (int64_t *) &masterState;
+    unpack<M2M_GET_STATE_REPLY>(*i);
   }
 };
 

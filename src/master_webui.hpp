@@ -11,7 +11,7 @@
 
 namespace mesos { namespace internal { namespace master {
 
-void startMasterWebUI(const PID &master, Params &params);
+void startMasterWebUI(const PID &master, const Params &params);
 
 }}} /* namespace */
 

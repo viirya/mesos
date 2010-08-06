@@ -140,7 +140,7 @@ void Slave::operator () ()
   LOG(INFO) << "Slave started at " << self();
 
   // Get our hostname
-  char buf[256];
+  char buf[HOST_NAME_MAX];
   gethostname(buf, sizeof(buf));
   hostent *he = gethostbyname2(buf, AF_INET);
   string hostname = he->h_name;
@@ -150,10 +150,11 @@ void Slave::operator () ()
   // the master to display our public name in its web UI. Must include port#.
   LOG(INFO) << "setting up webuiUrl on port " << conf["webui_port"];
   string webuiUrl;
-  if (publicDns != NULL)
-    webuiUrl = publicDns;
-  else
+  if (getenv("MESOS_PUBLIC_DNS") != NULL) {
+    webuiUrl = getenv("MESOS_PUBLIC_DNS");
+  } else {
     webuiUrl = hostname;
+  }
 #ifdef MESOS_WEBUI
   webuiUrl += ":" + conf["webui_port"];
 #endif

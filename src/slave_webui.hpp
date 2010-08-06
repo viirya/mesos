@@ -10,7 +10,7 @@
 
 namespace mesos { namespace internal { namespace slave {
 
-void startSlaveWebUI(const PID &slave, char* webuiPort);
+void startSlaveWebUI(const PID &slave, const Params &paramt);
 
 }}} /* namespace */
 
