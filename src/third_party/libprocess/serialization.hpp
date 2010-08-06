@@ -14,9 +14,11 @@ struct serializer
 
   serializer(std::ostringstream& s) : stream(s) {}
 
-  void operator & (const bool &);
   void operator & (const int32_t &);
   void operator & (const int64_t &);
+#ifdef __APPLE__
+  void operator & (const intptr_t &);
+#endif
   void operator & (const double &);
   void operator & (const size_t &);
   void operator & (const std::string &);
@@ -29,9 +31,11 @@ struct deserializer
 
   deserializer(std::istringstream &s) : stream(s) {}
 
-  void operator & (bool &);
   void operator & (int32_t &);
   void operator & (int64_t &);
+#ifdef __APPLE__
+  void operator & (intptr_t &);
+#endif
   void operator & (double &);
   void operator & (size_t &);
   void operator & (std::string &);

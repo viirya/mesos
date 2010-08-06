@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <ev.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <netdb.h>
 #include <pthread.h>
 #include <signal.h>
@@ -1435,9 +1436,9 @@ void LinkManager::send(struct msg *msg)
     if ((it = persists.find(n)) != persists.end() ||
         (it = temps.find(n)) != temps.end()) {
       int s = it->second;
-      if (outgoing.find(s) == outgoing.end()) {
-        assert(persists.find(n) != persists.end());
-        assert(temps.find(n) == temps.end());
+      if (outgoing.count(s) == 0) {
+        assert(persists.count(n) != 0);
+        assert(temps.count(n) == 0 || temps[n] != s);
 
         /* Initialize the outgoing queue. */
         outgoing[s];
@@ -1585,9 +1586,16 @@ void LinkManager::closed(int s)
   synchronized(this) {
     if (sockets.count(s) > 0) {
       const node &n = sockets[s];
-      exited(n);
-      persists.erase(n);
-      temps.erase(n);
+
+      // Don't bother invoking exited unless socket was from persists.
+      if (persists.count(n) > 0 && persists[n] == s) {
+	persists.erase(n);
+	exited(n);
+      } else {
+	assert(temps.count(n) > 0 && temps[n] == s);
+	temps.erase(n);
+      }
+
       sockets.erase(s);
       outgoing.erase(s);
       close(s);

@@ -78,33 +78,15 @@ void LxcIsolationModule::initialize(Slave *slave)
 }
 
 
-
-void LxcIsolationModule::frameworkAdded(Framework* fw)
-{
-  infos[fw->id] = new FrameworkInfo();
-  infos[fw->id]->lxcExecutePid = -1;
-  infos[fw->id]->container = "";
-  fw->executorStatus = "No executor running";
-}
-
-
-void LxcIsolationModule::frameworkRemoved(Framework* fw)
-{
-  if (infos.find(fw->id) != infos.end()) {
-    delete infos[fw->id];
-    infos.erase(fw->id);
-  }
-}
-
-
 void LxcIsolationModule::startExecutor(Framework *fw)
 {
   if (!initialized)
     LOG(FATAL) << "Cannot launch executors before initialization!";
 
+  infos[fw->id] = new FrameworkInfo();
+
   LOG(INFO) << "Starting executor for framework " << fw->id << ": "
             << fw->executorInfo.uri;
-  CHECK(infos[fw->id]->lxcExecutePid == -1 && infos[fw->id]->container == "");
 
   // Get location of Mesos install in order to find mesos-launcher.
   string mesosHome = slave->getConf().get("home", ".");
@@ -137,7 +119,7 @@ void LxcIsolationModule::startExecutor(Framework *fw)
     launcher = new ExecutorLauncher(fw->id,
                                     fw->executorInfo.uri,
                                     fw->user,
-                                    slave->getWorkDirectory(fw->id),
+                                    slave->getUniqueWorkDirectory(fw->id),
                                     slave->self(),
                                     slave->getConf().get("hadoop_home", ""),
                                     !slave->local,
@@ -164,6 +146,8 @@ void LxcIsolationModule::killExecutor(Framework* fw)
       LOG(ERROR) << "lxc-stop returned " << ret;
     infos[fw->id]->container = "";
     fw->executorStatus = "No executor running";
+    delete infos[fw->id];
+    infos.erase(fw->id);
   }
 }
 
@@ -180,13 +164,15 @@ void LxcIsolationModule::resourcesChanged(Framework* fw)
     int32_t cpuShares = max(CPU_SHARES_PER_CPU * fw->resources.cpus,
                             MIN_CPU_SHARES);
     if (!setResourceLimit(fw, "cpu.shares", cpuShares)) {
-      slave->removeExecutor(fw->id, true);
+      // Tell slave to kill framework, which will invoke killExecutor.
+      slave->killFramework(fw);
       return;
     }
 
     int64_t rssLimit = max(fw->resources.mem, MIN_RSS);
     if (!setResourceLimit(fw, "memory.limit_in_bytes", rssLimit)) {
-      slave->removeExecutor(fw->id, true);
+      // Tell slave to kill framework, which will invoke killExecutor.
+      slave->killFramework(fw);
       return;
     }
   }
@@ -250,11 +236,13 @@ void LxcIsolationModule::Reaper::operator () ()
       if ((pid = waitpid((pid_t) -1, &status, WNOHANG)) > 0) {
         foreachpair (FrameworkID fid, FrameworkInfo* info, module->infos) {
           if (info->lxcExecutePid == pid) {
-            info->container = "";
             info->lxcExecutePid = -1;
+            info->container = "";
             LOG(INFO) << "Telling slave of lost framework " << fid;
             // TODO(benh): This is broken if/when libprocess is parallel!
             module->slave->executorExited(fid, status);
+            delete module->infos[fid];
+            module->infos.erase(fid);
             break;
           }
         }

@@ -5,15 +5,10 @@
 #include "process.hpp"
 #include "serialization.hpp"
 
+
 namespace process { namespace serialization {
 
 /* TODO(*): Check stream errors! Report errors! Ahhhh! */
-
-void serializer::operator & (const bool &b)
-{
-  stream.put(b ? 1 : 0);
-}
-
 
 void serializer::operator & (const int32_t &i)
 {
@@ -29,6 +24,19 @@ void serializer::operator & (const int64_t &i)
   stream.write((char *) &hiInt, sizeof(hiInt));
   stream.write((char *) &loInt, sizeof(loInt));
 }
+
+
+#ifdef __APPLE__
+void serializer::operator & (const intptr_t &i)
+{
+  if (sizeof(intptr_t) == sizeof(int32_t))
+    this->operator & ((int32_t &) i);
+  else if (sizeof(intptr_t) == sizeof(int64_t))
+    this->operator & ((int64_t &) i);
+  else
+    abort();
+}
+#endif
 
 
 void serializer::operator & (const double &d)
@@ -65,12 +73,6 @@ void serializer::operator & (const PID &pid)
 }
 
 
-void deserializer::operator & (bool &b)
-{
-  b = stream.get();
-}
-
-
 void deserializer::operator & (int32_t &i)
 {
   uint32_t netInt;
@@ -88,6 +90,19 @@ void deserializer::operator & (int64_t &i)
   int64_t lo64 = ntohl(loInt);
   i = (hi64 << 32) | lo64;
 }
+
+
+#ifdef __APPLE__
+void deserializer::operator & (intptr_t &i)
+{
+  if (sizeof(intptr_t) == sizeof(int32_t))
+    this->operator & ((int32_t &) i);
+  else if (sizeof(intptr_t) == sizeof(int64_t))
+    this->operator & ((int64_t &) i);
+  else
+    abort();
+}
+#endif
 
 
 void deserializer::operator & (double &d)

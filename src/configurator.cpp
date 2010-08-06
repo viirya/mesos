@@ -36,6 +36,15 @@ char** getEnviron() { return environ; }
 #endif /* __APPLE__ */
 
 
+Configurator::Configurator()
+{
+  addOption<string>("conf",
+                    "Specifies a config directory from which to\n"
+                    "read Mesos config files. The Mesos binaries\n"
+                    "use <install location>src/conf by default");
+}
+
+
 void Configurator::validate()
 {
   foreachpair (const string& key, const Option& opt, options) {
@@ -81,8 +90,8 @@ void Configurator::loadConfigFileIfGiven(bool overwrite) {
   string confDir = "";
   if (params.contains("conf"))
     confDir = params["conf"];
-//   else if (params.contains("home")) // find conf dir relative to MESOS_HOME
-//     confDir = params["home"] + "/" + DEFAULT_CONFIG_DIR;
+  else if (params.contains("home")) // find conf dir relative to MESOS_HOME
+    confDir = params["home"] + "/" + DEFAULT_CONFIG_DIR;
   if (confDir != "")
     loadConfigFile(confDir + "/" + CONFIG_FILE_NAME, overwrite);
 }

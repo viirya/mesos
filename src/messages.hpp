@@ -1,6 +1,8 @@
 #ifndef MESSAGES_HPP
 #define MESSAGES_HPP
 
+#include <stdint.h>
+
 #include <map>
 #include <string>
 #include <vector>
@@ -11,9 +13,9 @@
 #include <mesos.hpp>
 #include <mesos_types.hpp>
 
+#include "foreach.hpp"
 #include "params.hpp"
 #include "resources.hpp"
-#include "foreach.hpp"
 #include "task.hpp"
 
 
@@ -67,6 +69,7 @@ enum MessageType {
   M2S_KILL_TASK,
   M2S_KILL_FRAMEWORK,
   M2S_FRAMEWORK_MESSAGE,
+  M2S_UPDATE_FRAMEWORK_PID,
   M2S_SHUTDOWN, // Used in unit tests to shut down cluster
 
   /* From executor to slave. */
@@ -92,17 +95,18 @@ enum MessageType {
 #endif /* __sun__ */
 
   /* Internal to master */
-  M2M_GET_STATE,        // Used by web UI
+  M2M_GET_STATE,         // Used by web UI
   M2M_GET_STATE_REPLY,
-  M2M_TIMER_TICK,       // Timer for expiring filters etc
-  M2M_SHUTDOWN,         // Used in tests to shut down master
+  M2M_TIMER_TICK,        // Timer for expiring filters etc
+  M2M_FRAMEWORK_EXPIRED, // Timer for expiring frameworks
+  M2M_SHUTDOWN,          // Used in tests to shut down master
 
   /* Internal to slave */
-  S2S_GOT_MASTER,       // Used when looking up master with ZooKeeper
-  S2S_GET_STATE,        // Used by web UI
+  S2S_GOT_MASTER,        // Used when looking up master with ZooKeeper
+  S2S_GET_STATE,         // Used by web UI
   S2S_GET_STATE_REPLY,
-  S2S_CHILD_EXIT,       // Sent by reaper process
-  S2S_SHUTDOWN,         // Used in tests to shut down slave
+  S2S_CHILD_EXIT,        // Sent by reaper process
+  S2S_SHUTDOWN,          // Used in tests to shut down slave
 
   MESOS_MESSAGES,
 };
@@ -123,11 +127,11 @@ TUPLE(F2M_REGISTER_FRAMEWORK,
        ExecutorInfo));
 
 TUPLE(F2M_REREGISTER_FRAMEWORK,
-      (std::string /*fid*/,
+      (FrameworkID,
        std::string /*name*/,
        std::string /*user*/,
        ExecutorInfo,
-       bool /*failover*/));
+       int32_t /*generation*/));
 
 TUPLE(F2M_UNREGISTER_FRAMEWORK,
       (FrameworkID));
@@ -197,7 +201,7 @@ TUPLE(S2M_REGISTER_SLAVE,
        Resources));
 
 TUPLE(S2M_REREGISTER_SLAVE,
-      (std::string /*slave id*/,
+      (SlaveID,
        std::string /*name*/,
        std::string /*webuiUrl*/,
        Resources,
@@ -260,7 +264,7 @@ TUPLE(M2S_RUN_TASK,
        std::string /*taskName*/,
        std::string /*taskArgs*/,
        Params,
-       std::string /*framework PID*/));
+       PID /*framework PID*/));
 
 TUPLE(M2S_KILL_TASK,
       (FrameworkID,
@@ -272,7 +276,11 @@ TUPLE(M2S_KILL_FRAMEWORK,
 TUPLE(M2S_FRAMEWORK_MESSAGE,
       (FrameworkID,
        FrameworkMessage));
-        
+
+TUPLE(M2S_UPDATE_FRAMEWORK_PID,
+      (FrameworkID,
+       PID));
+
 TUPLE(M2S_SHUTDOWN,
       ());
 
@@ -328,11 +336,14 @@ TUPLE(M2M_GET_STATE,
       ());
 
 TUPLE(M2M_GET_STATE_REPLY,
-      (int64_t /* TODO(benh): BUG ON 32 BIT! ... pointer to MasterState*/));
+      (intptr_t /* master::state::MasterState * */));
 
 TUPLE(M2M_TIMER_TICK,
       ());
-       
+
+TUPLE(M2M_FRAMEWORK_EXPIRED,
+      (FrameworkID));
+
 TUPLE(M2M_SHUTDOWN,
       ());
 
@@ -343,7 +354,7 @@ TUPLE(S2S_GET_STATE,
       ());
 
 TUPLE(S2S_GET_STATE_REPLY,
-      (int64_t /* TODO(benh): BUG ON 32 BIT! ... pointer to SlaveState*/));
+      (intptr_t /* slave::state::SlaveState * */));
 
 TUPLE(S2S_CHILD_EXIT,
       (int32_t /*OS PID*/,
