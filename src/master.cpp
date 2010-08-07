@@ -125,23 +125,20 @@ Master::Master()
   : nextFrameworkId(0), nextSlaveId(0), nextSlotOfferId(0), masterId(0)
 {
   allocatorType = "simple";
-  evLogger = new EventLogger;
+  EventLogger evLogger;
 }
 
-
-Master::Master(const Params& conf_)
-  : conf(conf_), nextFrameworkId(0), nextSlaveId(0), nextSlotOfferId(0),
-    masterId(0)
+Master::Master(const Params& conf_, EventLogger& evLogger_)
+  : conf(conf_), evLogger(evLogger_), nextFrameworkId(0), nextSlaveId(0), 
+    nextSlotOfferId(0), masterId(0)
 {
   allocatorType = conf.get("allocator", "simple");
-  evLogger = new EventLogger;
 }
                    
 
 Master::~Master()
 {
   LOG(INFO) << "Shutting down master";
-  delete evLogger;
 
   delete allocator;
 
@@ -312,7 +309,7 @@ void Master::operator () ()
         break;
       }
 
-      evLogger->logFrameworkRegistered(fid, framework->user);
+      evLogger.logFrameworkRegistered(fid, framework->user);
       addFramework(framework);
       break;
     }
@@ -380,7 +377,7 @@ void Master::operator () ()
       Framework *framework = lookupFramework(fid);
       if (framework != NULL && framework->pid == from()) {
         removeFramework(framework);
-        //evLogger->logFrameworkUnregistered(fid);
+        //evLogger.logFrameworkUnregistered(fid);
       }
       else
         LOG(WARNING) << "Non-authoratative PID attempting framework "
@@ -433,7 +430,7 @@ void Master::operator () ()
         if (task != NULL) {
           LOG(INFO) << "Asked to kill " << task << " by its framework";
           killTask(task);
-          evLogger->logTaskStateUpdated(tid, fid, TASK_KILLED);
+          evLogger.logTaskStateUpdated(tid, fid, TASK_KILLED);
         } else {
           LOG(INFO) << "Asked to kill UNKNOWN task by its framework";
           send(framework->pid, pack<M2F_STATUS_UPDATE>(tid, TASK_LOST, ""));
@@ -536,7 +533,7 @@ void Master::operator () ()
           if (task != NULL) {
             LOG(INFO) << "Status update: " << task << " is in state " << state;
             task->state = state;
-            evLogger->logTaskStateUpdated(tid, fid, state);
+            evLogger.logTaskStateUpdated(tid, fid, state);
             // Remove the task if it finished or failed
             if (state == TASK_FINISHED || state == TASK_FAILED ||
                 state == TASK_KILLED || state == TASK_LOST) {
@@ -571,7 +568,7 @@ void Master::operator () ()
           if (task != NULL) {
             LOG(INFO) << "Status update: " << task << " is in state " << state;
             task->state = state;
-            evLogger->logTaskStateUpdated(tid, fid, state);
+            evLogger.logTaskStateUpdated(tid, fid, state);
             // Remove the task if it finished or failed
             if (state == TASK_FINISHED || state == TASK_FAILED ||
                 state == TASK_KILLED || state == TASK_LOST) {
@@ -834,7 +831,7 @@ void Master::processOfferReply(SlotOffer *offer,
                   params.getInt64("mem", -1));
 
     Slave *slave = lookupSlave(t.slaveId);
-    evLogger->logTaskCreated(t.taskId, framework->id, t.slaveId, 
+    evLogger.logTaskCreated(t.taskId, framework->id, t.slaveId, 
                              slave->webuiUrl, res);
 
     // Launch the tasks in the response

@@ -12,6 +12,7 @@ using boost::lexical_cast;
 using boost::bad_lexical_cast;
 
 using namespace mesos::internal::master;
+using mesos::internal::eventhistory::EventLogger;
 
 
 void usage(const char* progName, const Configurator& conf)
@@ -68,7 +69,9 @@ int main(int argc, char **argv)
   if (chdir(dirname(argv[0])) != 0)
     fatalerror("Could not chdir into %s", dirname(argv[0]));
 
-  Master *master = new Master(params);
+  EventLogger evLogger;
+
+  Master *master = new Master(params, evLogger);
   PID pid = Process::spawn(master);
 
   bool quiet = Logging::isQuiet(params);

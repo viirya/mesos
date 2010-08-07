@@ -308,7 +308,7 @@ class Master : public Tuple<ReliableProcess>
 {
 protected:
   Params conf;
-  EventLogger *evLogger;
+  EventLogger evLogger;
 
   unordered_map<FrameworkID, Framework *> frameworks;
   unordered_map<SlaveID, Slave *> slaves;
@@ -330,7 +330,7 @@ protected:
 public:
   Master();
 
-  Master(const Params& conf);
+  Master(const Params& conf, EventLogger& evLogger);
   
   ~Master();
 

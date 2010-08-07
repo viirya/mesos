@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "configurator.hpp"
+#include "event_history.hpp"
 #include "foreach.hpp"
 #include "logging.hpp"
 #include "mesos_local.hpp"
@@ -20,7 +21,7 @@ using mesos::internal::slave::IsolationModule;
 using mesos::internal::slave::ProcessBasedIsolationModule;
 
 using namespace mesos::internal;
-
+using mesos::internal::eventhistory::EventLogger;
 
 namespace {
 
@@ -76,7 +77,9 @@ PID launch(const Params& conf, bool initLogging)
       google::SetStderrLogging(google::INFO);
   }
 
-  master = new Master(conf);
+  EventLogger evLogger;
+
+  master = new Master(conf, evLogger);
 
   PID pid = Process::spawn(master);
 
