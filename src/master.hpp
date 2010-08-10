@@ -308,7 +308,7 @@ class Master : public Tuple<ReliableProcess>
 {
 protected:
   Params conf;
-  EventLogger evLogger;
+  EventLogger* evLogger;
 
   unordered_map<FrameworkID, Framework *> frameworks;
   unordered_map<SlaveID, Slave *> slaves;
@@ -328,9 +328,9 @@ protected:
                     // will be this master's ZooKeeper ephemeral id
 
 public:
-  Master();
+  Master(EventLogger* evLogger);
 
-  Master(const Params& conf, EventLogger& evLogger);
+  Master(const Params& conf, EventLogger* evLogger);
   
   ~Master();
 

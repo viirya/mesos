@@ -2,6 +2,7 @@
 
 #include <boost/lexical_cast.hpp>
 
+#include "event_history.hpp"
 #include "master.hpp"
 #include "slave.hpp"
 #include "mesos_exec.hpp"
@@ -23,6 +24,7 @@ using mesos::internal::slave::Slave;
 using mesos::internal::slave::Framework;
 using mesos::internal::slave::IsolationModule;
 using mesos::internal::slave::ProcessBasedIsolationModule;
+using mesos::internal::eventhistory::EventLogger;
 
 
 class NoopScheduler : public Scheduler
@@ -328,7 +330,8 @@ TEST(MasterTest, SlaveLost)
 {
   ASSERT_TRUE(GTEST_IS_THREADSAFE);
 
-  Master m;
+  EventLogger el;
+  Master m(&el);
   PID master = Process::spawn(&m);
 
   ProcessBasedIsolationModule isolationModule;
@@ -481,7 +484,8 @@ TEST(MasterTest, OfferRescinded)
   OfferReplyMessageFilter filter;
   Process::filter(&filter);
 
-  Master m;
+  EventLogger el;
+  Master m(&el);
   PID master = Process::spawn(&m);
 
   ProcessBasedIsolationModule isolationModule;
@@ -660,7 +664,8 @@ TEST(MasterTest, TaskRunning)
 {
   ASSERT_TRUE(GTEST_IS_THREADSAFE);
 
-  Master m;
+  EventLogger el;
+  Master m(&el);
   PID master = Process::spawn(&m);
 
   TaskRunningExecutor exec;
@@ -741,7 +746,8 @@ TEST(MasterTest, SchedulerFailoverStatusUpdate)
 
   ProcessClock::pause();
 
-  Master m;
+  EventLogger el;
+  Master m(&el);
   PID master = Process::spawn(&m);
 
   TaskRunningExecutor exec;

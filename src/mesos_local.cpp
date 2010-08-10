@@ -37,6 +37,7 @@ void initialize_glog() {
 
 namespace mesos { namespace internal { namespace local {
 
+static EventLogger* evLogger = NULL;
 static Master *master = NULL;
 static map<IsolationModule*, Slave*> slaves;
 static MasterDetector *detector = NULL;
@@ -48,6 +49,7 @@ void registerOptions(Configurator* conf)
   Logging::registerOptions(conf);
   Master::registerOptions(conf);
   Slave::registerOptions(conf);
+  EventLogger::registerOptions(conf);
 }
 
 
@@ -77,7 +79,7 @@ PID launch(const Params& conf, bool initLogging)
       google::SetStderrLogging(google::INFO);
   }
 
-  EventLogger evLogger;
+  evLogger = new EventLogger(conf);
 
   master = new Master(conf, evLogger);
 
@@ -105,6 +107,7 @@ void shutdown()
   Process::post(master->self(), M2M_SHUTDOWN);
   Process::wait(master->self());
   delete master;
+  delete evLogger;
   master = NULL;
 
   // TODO(benh): Ugh! Because the isolation module calls back into the

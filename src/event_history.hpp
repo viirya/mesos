@@ -1,15 +1,18 @@
 #ifndef __EVENT_HISTORY_HPP__
 #define __EVENT_HISTORY_HPP__
 
-#include "mesos.hpp"
-#include "resources.hpp"
-#include <iostream>
-#include <string>
+#include <ctime>
 #include <fstream>
+#include <iostream>
 #include <list>
 #include <map>
-#include <ctime>
+#include <string>
+
 #include <sqlite3.h>
+
+#include "configurator.hpp"
+#include "mesos.hpp"
+#include "resources.hpp"
 
 namespace mesos { namespace internal { namespace eventhistory {
 
@@ -67,8 +70,10 @@ class EventLogger {
 private:
   list<EventWriter*> writers; 
 public:
-  EventLogger(); 
+  EventLogger();
+  EventLogger(const Params&); 
   ~EventLogger();
+  static void registerOptions(Configurator*);
   int logResourceOffer(FrameworkID, Resources);
   int logTaskCreated(TaskID, FrameworkID, SlaveID, string sHostname, Resources);
   int logTaskStateUpdated(TaskID, FrameworkID, TaskState); 

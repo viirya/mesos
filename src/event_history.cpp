@@ -212,7 +212,16 @@ int SqlLiteEventWriter::logFrameworkUnregistered(FrameworkID fwid) {
 
 
 /////////////EventLogger//////////
-EventLogger::EventLogger() {
+void EventLogger::registerOptions(Configurator* conf) { // static function
+  conf->addOption<bool>("file-event-history", "Enable file event history logging", true);
+  conf->addOption<bool>("sqlite-event-history", "Enable SQLite event history logging", true);
+}
+
+
+EventLogger::EventLogger() { }
+
+
+EventLogger::EventLogger(const Params& params) {
   LOG(INFO) << "creating FileEventWriter" << endl;
   writers.push_front(new FileEventWriter());
   writers.push_front(new SqlLiteEventWriter);
@@ -226,7 +235,6 @@ EventLogger::~EventLogger() {
     delete *it;
   }
 }
-
 
 int EventLogger::logFrameworkRegistered(FrameworkID fwid, string user) {
   list<EventWriter*>::iterator it;
