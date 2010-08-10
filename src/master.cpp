@@ -1,14 +1,14 @@
 #include <iomanip>
 
 #include <glog/logging.h>
+#include <sys/time.h>
 
 #include "allocator.hpp"
 #include "allocator_factory.hpp"
+#include "event_history.hpp"
 #include "master.hpp"
 #include "master_webui.hpp"
-#include <sys/time.h>
 
-#include "event_history.hpp"
 
 
 using std::endl;

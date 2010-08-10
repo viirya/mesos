@@ -15,13 +15,13 @@
 using std::map;
 using std::vector;
 
+using mesos::internal::eventhistory::EventLogger;
 using mesos::internal::master::Master;
 using mesos::internal::slave::Slave;
 using mesos::internal::slave::IsolationModule;
 using mesos::internal::slave::ProcessBasedIsolationModule;
 
 using namespace mesos::internal;
-using mesos::internal::eventhistory::EventLogger;
 
 namespace {
 

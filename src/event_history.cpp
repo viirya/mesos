@@ -28,18 +28,12 @@ string getHumanReadableTimeStamp(){
 
 
 //////////FileEventWriter/////////
-FileEventWriter::FileEventWriter() {
-  //if log dir doesn't exist, create it
-  struct stat sb;
-  if (stat("logs", &sb) == -1) {
-    DLOG(INFO) << "stat on logs directory failed, [re]creating the dir" << endl;
-    if (mkdir("logs", S_IRWXU | S_IRWXG) != 0) {
-      LOG(ERROR) << "encountered an error while creating 'logs' directory, "
-                 << "event history may not be captured";
-    }
-  }
-  //set up log file in log dir
-  logfile.open ("logs/event_history_log.txt",ios::app|ios::out);
+
+/* Pre-condition: params["log_dir"] exists and is writable */
+FileEventWriter::FileEventWriter(const Params& params) {
+  string logDir = params.get("log_dir","");
+  CHECK_NE(logDir, "") << "FileEventWriter was created when no log_dir was set";
+  logfile.open ((logDir + "/event_history_log.txt").c_str(),ios::app|ios::out);
 }
 
 
@@ -110,17 +104,13 @@ string SqlLiteEventWriter::getName(){
 }
 
 
-SqlLiteEventWriter::SqlLiteEventWriter() {
+/* Pre-condition: params["log_dir"] exists and is writable */
+SqlLiteEventWriter::SqlLiteEventWriter(const Params& params) {
   zErrMsg = 0;
-  //if log dir doesn't exist, create it
-  struct stat sb;
-  if (stat("logs", &sb) == -1) {
-    DLOG(INFO) << "stat on logs directory failed, [re]creating the dir" << endl;
-    if (mkdir("logs", S_IRWXU | S_IRWXG) != 0) {
-      LOG(ERROR) << "encountered an error while creating 'logs' directory, "
-                 << "event history may not be captured";
-    }
-  }
+  string logDir = params.get("log_dir","");
+  CHECK_NE(logDir, "") << "SqlLiteEventWriter constructor failed pre-condition."
+                       << " params[\"log_dir\" must be set.";
+
   //set up log file in log dir
   int rc = sqlite3_open("logs/event_history_db.sqlite3",&db);
   if( rc ) {
@@ -213,8 +203,8 @@ int SqlLiteEventWriter::logFrameworkUnregistered(FrameworkID fwid) {
 
 /////////////EventLogger//////////
 void EventLogger::registerOptions(Configurator* conf) { // static function
-  conf->addOption<bool>("file-event-history", "Enable file event history logging", true);
-  conf->addOption<bool>("sqlite-event-history", "Enable SQLite event history logging", true);
+  conf->addOption<bool>("event-history-file", "Enable file event history logging", true);
+  conf->addOption<bool>("event-history-sqlite", "Enable SQLite event history logging", true);
 }
 
 
@@ -222,14 +212,34 @@ EventLogger::EventLogger() { }
 
 
 EventLogger::EventLogger(const Params& params) {
-  LOG(INFO) << "creating FileEventWriter" << endl;
-  writers.push_front(new FileEventWriter());
-  writers.push_front(new SqlLiteEventWriter);
+  struct stat sb;
+  string logDir = params.get("log_dir", "");
+  if (logDir != "") {
+    if (stat(logDir.c_str(), &sb) == -1) {
+      DLOG(INFO) << "The log directory (" << logDir << ") does not exist, "
+                 << "creating it now." << endl ;
+      if (mkdir("logs", S_IRWXU | S_IRWXG) != 0) {
+        LOG(ERROR) << "encountered an error while creating 'logs' directory, "
+                   << "file based event history will not be captured";
+      }
+    }
+    //Create and add file based writers (i.e. writers which depend on log_dir
+    //being set) to writers list.
+    if (params.get<bool>("event-history-file",false)) {
+      LOG(INFO) << "creating FileEventWriter" << endl;
+      writers.push_front(new FileEventWriter(params));
+    }
+    if (params.get<bool>("event-history-sqlite",false)) {
+      LOG(INFO) << "creating SqliteEventWriter" << endl;
+      writers.push_front(new SqlLiteEventWriter(params));
+    }
+  } 
+  //Create and add non file based writers to writers list here.
 }
 
 
 EventLogger::~EventLogger() {
-  //delete all eventWriters in list
+  //Delete all eventWriters in list.
   list<EventWriter*>::iterator it;
   for (it = writers.begin(); it != writers.end(); it++) {
     delete *it;

@@ -42,6 +42,7 @@ private:
 public:
   string getName();
   FileEventWriter(); 
+  FileEventWriter(const Params&);
   ~FileEventWriter();
   int logTaskCreated(TaskID, FrameworkID, SlaveID, string sHostname, Resources);
   int logTaskStateUpdated(TaskID, FrameworkID, TaskState); 
@@ -58,6 +59,7 @@ private:
 public:
   string getName();
   SqlLiteEventWriter(); 
+  SqlLiteEventWriter(const Params&);
   ~SqlLiteEventWriter();
   int logTaskCreated(TaskID, FrameworkID, SlaveID, string sHostname, Resources);
   int logTaskStateUpdated(TaskID, FrameworkID, TaskState); 

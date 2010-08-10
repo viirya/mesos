@@ -1,45 +1,90 @@
+#include <cstdio>
 #include <gtest/gtest.h>
 #include <sys/stat.h>
 
 #include "event_history.hpp"
 #include "master.hpp"
 #include "params.hpp"
+#include "testing_utils.hpp"
 
-using mesos::FrameworkID;
 using namespace mesos::internal::eventhistory;
+using namespace mesos::internal::test;
+using mesos::FrameworkID;
 using mesos::internal::Params;
 
-TEST(EventHistoryTest, logFrameworkRegisteredDefaultParams)
+/*  TODO(*):
+    1) EventLogger API test
+      - create an EventLogger, register a TestEventWriter, test all 
+        logging statements. 
+    2) Master and Slave's use of Event history
+      - create a Master and Slave, simulate sending them messages (e.g.
+        adding a slave to a master) and see if the right output is logged.
+    3) EventWriter tests
+ */
+
+TEST_WITH_WORKDIR(EventHistoryTest, EventLoggingTurnedOff)
 {
-  ASSERT_TRUE(GTEST_IS_THREADSAFE);
+  EXPECT_TRUE(GTEST_IS_THREADSAFE);
 
-  EventLogger evLogger;
-  FrameworkID fid = "MasterID-FrameworkID";
-  evLogger.logFrameworkRegistered(fid, "UserID");
-  // make sure log file, and sqlite3 db were created
-  // and are regular files
-  struct stat sb;
-  ASSERT_NE(stat("logs/event_history_log.txt", &sb), -1);
-  ASSERT_TRUE(S_ISREG(sb.st_mode));
-
-  //TODO(andyk): check that framework registration got logged to textfile
-
-  ASSERT_NE(stat("logs/event_history_db.sqlite3", &sb), -1);
-  ASSERT_TRUE(S_ISREG(sb.st_mode));
- 
-  //TODO(andyk): check that framework registration got logged to sqlite
-}
-
-
-TEST(EventHistoryTest, logFrameworkRegisteredWithParams)
-{
-  ASSERT_TRUE(GTEST_IS_THREADSAFE);
-
-  //TODO(andyk): load log_dir and sqlite/file flags into params file
   Params params;
-  params["log_dir"] = "/tmp/test_mesos";
-  params["sqlite-event-history"] = "true";
+  params.set<bool>("event-history-sqlite", false);
+  params.set<bool>("event-history-file", false);
   EventLogger evLogger(params);
   FrameworkID fid = "MasterID-FrameworkID";
   evLogger.logFrameworkRegistered(fid, "UserID");
+
+  struct stat sb;
+  // make sure eventlog file and sqlite db were NOT created
+  EXPECT_EQ(stat("logs/event_history_log.txt", &sb), -1);
+  EXPECT_FALSE(S_ISREG(sb.st_mode));
+
+  EXPECT_EQ(stat("logs/event_history_db.sqlite3", &sb), -1);
+  EXPECT_FALSE(S_ISREG(sb.st_mode));
+}
+
+//This test might be unecessary
+TEST_WITH_WORKDIR(EventHistoryTest, NoEventLoggingIfLogDirNotSet)
+{
+  EXPECT_TRUE(GTEST_IS_THREADSAFE);
+
+  struct stat sb;
+  //the following two lines might be unecesary 
+  remove("logs/event_history_log.txt");
+  EXPECT_EQ(stat("logs", &sb), -1);
+
+  Params params;
+  params.set<bool>("event-history-sqlite", true);
+  params.set<bool>("event-history-file", true);
+  params.set<string>("log_dir", "");
+  EventLogger evLogger(params);
+  FrameworkID fid = "MasterID-FrameworkID";
+  evLogger.logFrameworkRegistered(fid, "UserID");
+
+  // make sure eventlog file and sqlite db were NOT created
+  EXPECT_EQ(stat("logs/event_history_log.txt", &sb), -1);
+  EXPECT_FALSE(S_ISREG(sb.st_mode));
+
+  EXPECT_EQ(stat("logs/event_history_db.sqlite3", &sb), -1);
+  EXPECT_FALSE(S_ISREG(sb.st_mode));
+}
+
+TEST_WITH_WORKDIR(EventHistoryTest, UsesLogDirLocation)
+{
+  EXPECT_TRUE(GTEST_IS_THREADSAFE);
+
+  Params params;
+  params.set<bool>("event-history-sqlite", true);
+  params.set<bool>("event-history-file", true);
+  params.set<string>("log_dir", "test-log-dir");
+  EventLogger evLogger(params);
+  FrameworkID fid = "MasterID-FrameworkID";
+  evLogger.logFrameworkRegistered(fid, "UserID");
+
+  struct stat sb;
+  // make sure eventlog file and sqlite db were NOT created
+  EXPECT_NE(stat("test-log-dir/event_history_log.txt", &sb), -1);
+  EXPECT_TRUE(S_ISREG(sb.st_mode));
+
+  EXPECT_NE(stat("test-log-dir/event_history_db.sqlite3", &sb), -1);
+  EXPECT_TRUE(S_ISREG(sb.st_mode));
 }
