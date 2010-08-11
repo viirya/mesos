@@ -81,7 +81,7 @@ TEST_WITH_WORKDIR(EventHistoryTest, UsesLogDirLocation)
   evLogger.logFrameworkRegistered(fid, "UserID");
 
   struct stat sb;
-  // make sure eventlog file and sqlite db were NOT created
+  // make sure eventlog file and sqlite db were created in the correct location
   EXPECT_NE(stat("test-log-dir/event_history_log.txt", &sb), -1);
   EXPECT_TRUE(S_ISREG(sb.st_mode));
 

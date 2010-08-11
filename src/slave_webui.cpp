@@ -25,13 +25,13 @@ struct webuiArgs {
   string webuiPort;
   string logDir;
   string workDir;
-} myWebuiArgs; 
+} myWebuiArgs;
 
 void *runSlaveWebUI(void *)
 {
   LOG(INFO) << "Web UI thread started";
   Py_Initialize();
-  char* nargv[4]; 
+  char* nargv[4];
   nargv[0] = const_cast<char*>("webui/slave/webui.py");
   nargv[1] = const_cast<char*>(myWebuiArgs.webuiPort.c_str());
   nargv[2] = const_cast<char*>(myWebuiArgs.logDir.c_str());
@@ -55,7 +55,7 @@ void startSlaveWebUI(const PID &slave, const Params &params)
   myWebuiArgs.webuiPort = params.get("webui_port","8081");
   myWebuiArgs.logDir = params.get("log_dir","/tmp");
   myWebuiArgs.workDir = params.get("work_dir","/tmp");
-  LOG(INFO) << "Starting slave web UI on port " << myWebuiArgs.webuiPort 
+  LOG(INFO) << "Starting slave web UI on port " << myWebuiArgs.webuiPort
             << ", using log_dir " << myWebuiArgs.logDir;
   ::slave = slave;
   pthread_t thread;

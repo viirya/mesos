@@ -112,7 +112,7 @@ SqlLiteEventWriter::SqlLiteEventWriter(const Params& params) {
                        << " params[\"log_dir\" must be set.";
 
   //set up log file in log dir
-  int rc = sqlite3_open("logs/event_history_db.sqlite3",&db);
+  int rc = sqlite3_open((logDir + "/event_history_db.sqlite3").c_str(),&db);
   if( rc ) {
     LOG(ERROR) << "Can't open database: " << sqlite3_errmsg(db) << endl;
     sqlite3_close(db);
@@ -214,11 +214,12 @@ EventLogger::EventLogger() { }
 EventLogger::EventLogger(const Params& params) {
   struct stat sb;
   string logDir = params.get("log_dir", "");
+  LOG(INFO) << "creating EventLogger, using log_dir: " << logDir << endl;
   if (logDir != "") {
     if (stat(logDir.c_str(), &sb) == -1) {
-      DLOG(INFO) << "The log directory (" << logDir << ") does not exist, "
+      LOG(INFO) << "The log directory (" << logDir << ") does not exist, "
                  << "creating it now." << endl ;
-      if (mkdir("logs", S_IRWXU | S_IRWXG) != 0) {
+      if (mkdir(logDir.c_str(), S_IRWXU | S_IRWXG) != 0) {
         LOG(ERROR) << "encountered an error while creating 'logs' directory, "
                    << "file based event history will not be captured";
       }

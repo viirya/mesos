@@ -23,7 +23,8 @@ using namespace std;
 struct webuiArgs {
   string webuiPort;
   string logDir;
-} myWebuiArgs; 
+  bool sqlLiteEnabled;
+} myWebuiArgs;
 
 
 void *runMasterWebUI(void *)
@@ -33,7 +34,7 @@ void *runMasterWebUI(void *)
   LOG(INFO) << "LOG_DIR AGAIN IS: " << myWebuiArgs.logDir;
 
   Py_Initialize();
-  char* nargv[3]; 
+  char* nargv[3];
   nargv[0] = const_cast<char*>("webui/master/webui.py");
   nargv[1] = const_cast<char*>(myWebuiArgs.webuiPort.c_str());
   nargv[2] = const_cast<char*>(myWebuiArgs.logDir.c_str());
@@ -54,9 +55,11 @@ void *runMasterWebUI(void *)
 void startMasterWebUI(const PID &master, const Params& params)
 {
   myWebuiArgs.webuiPort = params.get("webui_port","8080");
-  myWebuiArgs.logDir = params.get("log_dir","/tmp");
-  LOG(INFO) << "Starting master web UI on port " << myWebuiArgs.webuiPort 
-            << ", using log_dir " << myWebuiArgs.logDir;
+  myWebuiArgs.logDir = params.get("log_dir","/tmp"); //glog uses /tmp if log_dir 
+                                                     //not set, so default=/tmp
+  myWebuiArgs.sqlLiteEnabled = params.get("event-history-sqlite",false);
+  LOG(INFO) << "Starting master web UI on port " << myWebuiArgs.webuiPort
+            << ", using log_dir:" << myWebuiArgs.logDir;
   ::master = master;
   pthread_t thread;
   pthread_create(&thread, 0, runMasterWebUI, NULL);
@@ -77,8 +80,8 @@ public:
   {
     send(::master, pack<M2M_GET_STATE>());
     receive();
-    int64_t *i = (int64_t *) &masterState;
-    unpack<M2M_GET_STATE_REPLY>(*i);
+    CHECK(msgid() == M2M_GET_STATE_REPLY);
+    unpack<M2M_GET_STATE_REPLY>(*((intptr_t *) &masterState));
   }
 };
 
