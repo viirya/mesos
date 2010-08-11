@@ -215,6 +215,7 @@ YAHOO.util.Event.addListener(window, "load", function() {
 %if framework != None:
   <p>
   Name: {{framework.name}}<br />
+  User: {{framework.user}}<br />
   Connected: {{format_time(framework.connect_time)}}<br />
   Executor: {{framework.executor}}<br />
   Running Tasks: {{framework.tasks.size()}}<br />

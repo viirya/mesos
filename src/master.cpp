@@ -85,7 +85,7 @@ protected:
       unpack<M2M_GET_STATE_REPLY>(*((intptr_t *) &state));
 
       uint32_t total_cpus = 0;
-      uint64_t total_mem = 0;
+      uint32_t total_mem = 0;
       struct timeval curr_time;
       struct timezone tzp;
       gettimeofday(&curr_time, &tzp);
@@ -174,14 +174,14 @@ state::MasterState * Master::getState()
 
   foreachpair (_, Slave *s, slaves) {
     state::Slave *slave = new state::Slave(s->id, s->hostname, s->webuiUrl,
-          s->resources.cpus, s->resources.mem, s->connectTime);
+        s->resources.cpus, s->resources.mem, s->connectTime);
     state->slaves.push_back(slave);
   }
 
   foreachpair (_, Framework *f, frameworks) {
-    state::Framework *framework = new state::Framework(f->id, f->name, 
-       f->executorInfo.uri, f->resources.cpus, f->resources.mem,
-       f->connectTime);
+    state::Framework *framework = new state::Framework(f->id, f->user,
+        f->name, f->executorInfo.uri, f->resources.cpus, f->resources.mem,
+        f->connectTime);
     state->frameworks.push_back(framework);
     foreachpair (_, Task *t, f->tasks) {
       state::Task *task = new state::Task(t->id, t->name, t->frameworkId,
@@ -789,7 +789,7 @@ void Master::processOfferReply(SlotOffer *offer,
     // Check whether this task size is valid
     Params params(t.params);
     Resources res(params.getInt32("cpus", -1),
-                  params.getInt64("mem", -1));
+                  params.getInt32("mem", -1));
     if (res.cpus < MIN_CPUS || res.mem < MIN_MEM || 
         res.cpus > MAX_CPUS || res.mem > MAX_MEM) {
       terminateFramework(framework, 0,
@@ -867,7 +867,7 @@ void Master::launchTask(Framework *framework, const TaskDescription& t)
 {
   Params params(t.params);
   Resources res(params.getInt32("cpus", -1),
-                params.getInt64("mem", -1));
+                params.getInt32("mem", -1));
 
   // The invariant right now is that launchTask is called only for
   // TaskDescriptions where the slave is still valid (see the code
