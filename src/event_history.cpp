@@ -202,9 +202,13 @@ int SqlLiteEventWriter::logFrameworkUnregistered(FrameworkID fwid) {
 
 
 /////////////EventLogger//////////
-void EventLogger::registerOptions(Configurator* conf) { // static function
-  conf->addOption<bool>("event-history-file", "Enable file event history logging", true);
-  conf->addOption<bool>("event-history-sqlite", "Enable SQLite event history logging", true);
+void EventLogger::registerOptions(Configurator* conf,
+                                  bool fileWritersEnabledByDefault)
+{
+  conf->addOption<bool>("event-history-file",
+      "Enable file event history logging", fileWritersEnabledByDefault);
+  conf->addOption<bool>("event-history-sqlite",
+      "Enable SQLite event history logging", fileWritersEnabledByDefault);
 }
 
 
@@ -226,11 +230,11 @@ EventLogger::EventLogger(const Params& params) {
     }
     //Create and add file based writers (i.e. writers which depend on log_dir
     //being set) to writers list.
-    if (params.get<bool>("event-history-file",false)) {
+    if (params.get<bool>("event-history-file", false)) {
       LOG(INFO) << "creating FileEventWriter" << endl;
       writers.push_front(new FileEventWriter(params));
     }
-    if (params.get<bool>("event-history-sqlite",false)) {
+    if (params.get<bool>("event-history-sqlite", false)) {
       LOG(INFO) << "creating SqliteEventWriter" << endl;
       writers.push_front(new SqlLiteEventWriter(params));
     }

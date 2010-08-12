@@ -39,7 +39,7 @@ int main(int argc, char **argv)
 #endif
   Logging::registerOptions(&conf);
   Master::registerOptions(&conf);
-  EventLogger::registerOptions(&conf);
+  EventLogger::registerOptions(&conf, true);
 
   if (argc == 2 && string("--help") == argv[1]) {
     usage(argv[0], conf);

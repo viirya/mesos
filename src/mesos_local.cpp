@@ -49,7 +49,7 @@ void registerOptions(Configurator* conf)
   Logging::registerOptions(conf);
   Master::registerOptions(conf);
   Slave::registerOptions(conf);
-  EventLogger::registerOptions(conf);
+  EventLogger::registerOptions(conf, false);
 }
 
 

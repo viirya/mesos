@@ -73,9 +73,9 @@ private:
   list<EventWriter*> writers; 
 public:
   EventLogger();
-  EventLogger(const Params&); 
+  EventLogger(const Params&);
   ~EventLogger();
-  static void registerOptions(Configurator*);
+  static void registerOptions(Configurator*, bool fileWritersEnabledByDefault);
   int logResourceOffer(FrameworkID, Resources);
   int logTaskCreated(TaskID, FrameworkID, SlaveID, string sHostname, Resources);
   int logTaskStateUpdated(TaskID, FrameworkID, TaskState); 
