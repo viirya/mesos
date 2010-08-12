@@ -15,14 +15,14 @@ database_location = os.getcwd() + '/logs/event_history_db.sqlite3'
 @route('/')
 def index():
   bottle.TEMPLATES.clear() # For rapid development
-  return template("index", start_time = start_time)
+  return template("index", start_time = start_time, sqlite_enabled = sqlite_enabled)
 
 
 @route('/framework/:id')
 def framework(id):
   taskid = request.GET.get('taskid', '').strip()
   bottle.TEMPLATES.clear() # For rapid development
-  return template("framework", framework_id = id, task_id = taskid)
+  return template("framework", framework_id = id, task_id = taskid, sqlite_enabled = sqlite_enabled)
 
 
 @route('/static/:filename#.*#')
@@ -155,12 +155,17 @@ def logdir():
   return log_dir
 
 bottle.TEMPLATE_PATH.append('./webui/master/%s.tpl')
-if sys.argv[1]:
+if len(sys.argv) > 0:
   webui_port = sys.argv[1] 
 else:
   webui_port = 8080
-if sys.argv[2]:
+if len(sys.argv) > 1:
   log_dir = sys.argv[2] 
 else:
   log_dir = "/tmp" 
+if len(sys.argv) > 2 and sys.argv[3] == "true":
+  sqlite_enabled = True;
+else:
+  sqlite_enabled = False;
+
 bottle.run(host = '0.0.0.0', port = webui_port)

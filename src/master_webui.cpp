@@ -23,7 +23,7 @@ using namespace std;
 struct webuiArgs {
   string webuiPort;
   string logDir;
-  bool sqlLiteEnabled;
+  string sqliteEnabled;
 } myWebuiArgs;
 
 
@@ -34,11 +34,12 @@ void *runMasterWebUI(void *)
   LOG(INFO) << "LOG_DIR AGAIN IS: " << myWebuiArgs.logDir;
 
   Py_Initialize();
-  char* nargv[3];
+  char* nargv[4];
   nargv[0] = const_cast<char*>("webui/master/webui.py");
   nargv[1] = const_cast<char*>(myWebuiArgs.webuiPort.c_str());
   nargv[2] = const_cast<char*>(myWebuiArgs.logDir.c_str());
-  PySys_SetArgv(3,nargv);
+  nargv[3] = const_cast<char*>(myWebuiArgs.sqliteEnabled.c_str());
+  PySys_SetArgv(4,nargv);
   PyRun_SimpleString("import sys\n"
       "sys.path.append('webui/master/swig')\n"
       "sys.path.append('webui/common')\n"
@@ -57,7 +58,11 @@ void startMasterWebUI(const PID &master, const Params& params)
   myWebuiArgs.webuiPort = params.get("webui_port","8080");
   myWebuiArgs.logDir = params.get("log_dir","/tmp"); //glog uses /tmp if log_dir 
                                                      //not set, so default=/tmp
-  myWebuiArgs.sqlLiteEnabled = params.get("event-history-sqlite",false);
+  if (params.get("event-history-sqlite",false)) {
+    myWebuiArgs.sqliteEnabled = "true";
+  } else {
+    myWebuiArgs.sqliteEnabled = "false";
+  }
   LOG(INFO) << "Starting master web UI on port " << myWebuiArgs.webuiPort
             << ", using log_dir:" << myWebuiArgs.logDir;
   ::master = master;

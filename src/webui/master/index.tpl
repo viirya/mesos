@@ -8,6 +8,7 @@
 <head>
 <title>Mesos Master on {{HOSTNAME}}</title>
 <!-- Combo-handled YUI CSS files: -->
+%if sqlite_enabled:
 <link rel="stylesheet" type="text/css" href="/yui_2.8.1/build/paginator/assets/skins/sam/paginator.css">
 <link rel="stylesheet" type="text/css" href="/yui_2.8.1/build/datatable/assets/skins/sam/datatable.css">
 
@@ -85,7 +86,7 @@ YAHOO.util.Event.addListener(window, "load", function() {
   };
 });
 </script>
-
+%end
 <link rel="stylesheet" type="text/css" href="/static/stylesheet.css" />
 </head>
 <body class="yui-skin-sam">
@@ -98,6 +99,7 @@ Started: {{format_time(start_time)}}<br />
 PID: {{master.pid}}<br />
 Slaves: {{master.slaves.size()}}<br />
 Frameworks: {{master.frameworks.size()}}<br />
+SQLite event logging enabled: {{sqlite_enabled}}<br />
 </p>
 
 <p>
@@ -247,8 +249,10 @@ Idle: {{idle_cpus}} CPUs, {{format_mem(idle_mem)}} MEM<br />
   <p>No offers are active.</p>
 %end
 
+%if sqlite_enabled:
 <h2>Framework History</h2>
 <div id="frameworks_table"></div>
+%end
 
 </body>
 </html>
