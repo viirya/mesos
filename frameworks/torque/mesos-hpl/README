@@ -1,4 +1,4 @@
-This installation of HPL was used for the OSDI submission of Mesos (named Mesos at the time). It was compiled for large EC2 instances running Ubuntu (Lucid).
+This installation of HPL was used for the OSDI submission of Mesos (named Nexus at the time). It was compiled for large EC2 instances running Ubuntu (Lucid).
 
 The various "X-node" directories contain just the configuration file HPL.dat which adjusts the size of the problem (e.g. the matrix) in order to provide a mixed workload for experiments. Jobs using these conf files can be launched with the corresponding qsub scripts in the /root/mesos/frameworks/torque/ directory. 
 

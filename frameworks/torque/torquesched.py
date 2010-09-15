@@ -27,7 +27,7 @@ SCHEDULER_ITERATION = 2 #number of seconds torque waits before looping through
                         #is 10min (ie 600) but we want it to be low so jobs 
                         #will run as soon as the framework has acquired enough
                         #resources
-SAFE_ALLOCATION = {"cpus":48,"mem":128} #just set statically for now, 128MB
+SAFE_ALLOCATION = {"cpus":48,"mem":48*1024} #just set statically for now, 48gb 
 MIN_SLOT_SIZE = {"cpus":"1","mem":1024} #1GB
 MIN_SLOTS_HELD = 0 #keep at least this many slots even if none are needed
 
@@ -48,12 +48,12 @@ fh.setLevel(logging.DEBUG)
 driverlog = logging.getLogger("driver_logger")
 driverlog.setLevel(logging.DEBUG)
 driverlog.addHandler(fh)
-#driverlog.addHandler(ch)
+driverlog.addHandler(ch)
 
 monitorlog = logging.getLogger("monitor_logger")
 monitorlog.setLevel(logging.DEBUG)
 monitorlog.addHandler(fh)
-#monitorlog.addHandler(ch)
+monitorlog.addHandler(ch)
 
 class MyScheduler(mesos.Scheduler):
   def __init__(self, ip):
@@ -65,18 +65,22 @@ class MyScheduler(mesos.Scheduler):
     self.overloaded = False
     self.numToRegister = MIN_SLOTS_HELD
 
+  def registered(self, driver, fid):
+    driverlog.info("Mesos torque framwork registered with frameworkID %s" % fid)
+
+  def getFrameworkName(self, driver):
+    return "Mesos Torque Framework"
+
   def getExecutorInfo(self, driver):
+    print "in getExectutorInfo()"
     execPath = os.path.join(os.getcwd(), "start_pbs_mom.sh")
     initArg = self.ip # tell executor which node the pbs_server is running on
     driverlog.info("in getExecutorInfo, setting execPath = " + execPath + " and initArg = " + initArg)
     return mesos.ExecutorInfo(execPath, initArg)
 
-  def registered(self, driver, fid):
-    driverlog.info("Mesos torque framwork registered with frameworkID %s" % fid)
-
   def resourceOffer(self, driver, oid, slave_offers):
     self.driver = driver
-    driverlog.debug("Got slot offer %d" % oid)
+    driverlog.debug("Got slot offer %s" % oid)
     self.lock.acquire()
     driverlog.debug("resourceOffer() acquired lock")
     tasks = []
@@ -106,7 +110,9 @@ class MyScheduler(mesos.Scheduler):
       driverlog.info("done writing logfile")
       driverlog.info("self.id now set to " + str(self.id))
     #print "---"
-    driver.replyToOffer(oid, tasks, {"timeout": "1"})
+    print "replying to offer, accepting %d tasks: %s" % (len(tasks), str(tasks))
+    #driver.replyToOffer(oid, tasks, {"timeout": "1"})
+    driver.replyToOffer(oid, tasks, {})
     self.lock.release()
     driverlog.debug("resourceOffer() finished, released lock\n\n")
 
@@ -161,8 +167,6 @@ class MyScheduler(mesos.Scheduler):
     if toKill > 0: 
       monitorlog.warn("Done killing. We were supposed to kill %d nodes, but only found and killed %d free nodes" % (numNodes, numNodes-toKill))
 
-  def getFrameworkName(self, driver):
-    return "Mesos Torque Framework"
 
 
 def monitor(sched):
@@ -248,9 +252,13 @@ if __name__ == "__main__":
  # Popen("killall pbs_sched", shell=True)
  # #time.sleep(2)
 
-  monitorlog.info("starting pbs_scheduler")
+  #monitorlog.info("starting pbs_scheduler")
   #Popen("/etc/init.d/pbs_sched start", shell=True)
-  Popen("pbs_sched", shell=True)
+  #Popen("pbs_sched", shell=True)
+
+  monitorlog.info("starting maui")
+  #Popen("/etc/init.d/pbs_sched start", shell=True)
+  Popen("maui", shell=True)
 
   #ip = Popen("hostname -i", shell=True, stdout=PIPE).stdout.readline().rstrip() #linux
   #ip = Popen("ifconfig en1 | awk '/inet / { print $2 }'", shell=True, stdout=PIPE).stdout.readline().rstrip() # os x
