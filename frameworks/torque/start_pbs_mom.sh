@@ -12,4 +12,4 @@ if [ "x$MESOS_HOME" == "x" ]; then
 fi
 
 export PYTHONPATH=$MESOS_HOME/lib/python
-exec $PYTHON "$(dirname $0)/start_pbs_mob.py" $@
+exec $PYTHON "$(dirname $0)/start_pbs_mom.py" $@
