@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+yes|apt-get install libatlas-base-dev
+yes|apt-get install libgfortran3
+
+dsh -c -f slaves "yes|apt-get install libatlas-base-dev"
+dsh -c -f slaves "yes|apt-get install libgfortran3"
