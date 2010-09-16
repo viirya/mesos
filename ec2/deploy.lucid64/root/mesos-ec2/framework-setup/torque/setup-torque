@@ -10,9 +10,9 @@ SLAVES="`cat $SLAVES_FILE`"
 SCHEDULER_ITERATION=5
 
 #These seem to be broken, i.e. missing directories after install
-#ssh $MASTER "apt-get install -y torque-server"
-#ssh $MASTER "apt-get install -y torque-scheduler"
-#ssh $MASTER "apt-get install -y torque-client"
+#ssh $MASTERS "apt-get install -y torque-server"
+#ssh $MASTERS "apt-get install -y torque-scheduler"
+#ssh $MASTERS "apt-get install -y torque-client"
 
 #install torque: download/unzip torque
 function installtorque {

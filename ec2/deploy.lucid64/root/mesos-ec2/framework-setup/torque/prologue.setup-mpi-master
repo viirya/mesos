@@ -1,6 +1,6 @@
 #! /usr/bin/env sh
 
-echo "In Mother Superior prologue, PBS_NODEFILE is: "
+echo "In Mother Superior prologue script, which will set up your Torque allocation for you. You can access the addresses of the nodes which are part of your allocation via the \$PBS_NODEFILE environment variable, which is: "
 
 cat $PBS_NODEFILE
 
@@ -35,5 +35,5 @@ done
 wait
 sleep 2
 
-echo "exiting with zero"
+echo "Welcome! Your torque allocation has been set up for you. An MPI ring has been set up for you. Use mpdtrace to see all of the nods in your ring. Mother Superior prologue exiting with zero."
 exit 0
