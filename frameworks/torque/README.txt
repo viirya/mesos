@@ -25,7 +25,7 @@ NOTE: You will probably have to update your PATH after maui is installed (in /us
 ---------------------------------------
 
 ==FRAMEWORK EXECUTOR==
-The mesos executor for this framework will run pbs_mom and tell it to look at the framework scheduler as its host. Thus, you will need to have pbs_mom installed on all mesos slave nodes that might run tasks for this framework. This is done as part of the ~/mesos-ec2/setup-frameworks/torque/setup-torque script (the location of this script might move around, and it actually currently not committed to master, I don't think? --andyk, 9/15/10).
+The mesos executor for this framework will run pbs_mom and tell it to look at the framework scheduler as its host. Thus, you will need to have pbs_mom installed on all mesos slave nodes that might run tasks for this framework. This is done as part of the ~/mesos-ec2/framework-setup/torque/setup-torque script.
 
 You should be able to ssh into a slave node and see pbs_mom running (e.g. by running `ps aux|grep pbs_mom`. You can manually interact with pbs_mom using the `momctl` program.
 
@@ -41,11 +41,11 @@ MIN_SLOTS_HELD = # compute nodes to keep around min
 
 
 ===CHOOSING A TORQUE SCHEDULER===
-The framework can use whichever torque compatible scheduler that is desired. By default, the torque ec2 setup scripts that (will eventually) come with mesos will install maui, which the Mesos FW Scheduler (i.e. torquesched.py, which is called by torquesched.sh) will try to run when it starts up. You can also use the default torque fifo scheduler (pbs_sched).
+The framework can use whichever torque compatible scheduler that is desired. By default, the torque ec2 setup scripts that come with mesos will install maui, which the Mesos FW Scheduler (i.e. torquesched.py, which is called by torquesched.sh) will try to run when it starts up. You can also use the default torque fifo scheduler (pbs_sched).
 
 
 ===MPI===
-The ec2 torque setup scripts also currently install mpich2 for you on all slaves. This is done by running ~/mesos-ec2/[setup-frameworks/torque/]setup-mpi, which uses apt-get to install mpich2 on all nodes (though the default AMI's that mesos-ec2 uses right now already has it installed, I believe).
+The ec2 torque setup scripts also currently install mpich2 for you on all slaves. This is done by running ~/mesos-ec2/framework-setup/torque/setup-mpi, which uses apt-get to install mpich2 on all nodes (though the default AMI's that mesos-ec2 uses right now already has it installed, I believe).
 
 Epilogue and Prologue scripts are run when qsub returns an allocation of machines. These scripts setup an MPI ring for you, which means you *should* be able to do mpirun right away inside of your allocation.
 

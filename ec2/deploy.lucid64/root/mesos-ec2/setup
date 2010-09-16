@@ -199,8 +199,5 @@ $HADOOP_HOME/bin/hadoop namenode -format
 echo "Starting HDFS..."
 $HADOOP_HOME/bin/start-dfs.sh
 
-#echo "Setting up torque"
-#./setup-torque
-
 echo "Starting Mesos cluster..."
 ./start-mesos

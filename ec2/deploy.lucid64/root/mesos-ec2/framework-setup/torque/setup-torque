@@ -2,16 +2,17 @@
 
 cd /root/mesos-ec2
 
-MASTERS=`cat master`
-SLAVES_FILE="slaves"
-SLAVES=`cat $SLAVES_FILE`
+SLAVES_FILE="/root/mesos-ec2/slaves"
+MASTERS_FILE="/root/mesos-ec2/masters"
+MASTERS="`cat $MASTERS_FILE`"
+SLAVES="`cat $SLAVES_FILE`"
 
 SCHEDULER_ITERATION=5
 
 #These seem to be broken, i.e. missing directories after install
-#ssh $MASTERS "apt-get install -y torque-server"
-#ssh $MASTERS "apt-get install -y torque-scheduler"
-#ssh $MASTERS "apt-get install -y torque-client"
+#ssh $MASTER "apt-get install -y torque-server"
+#ssh $MASTER "apt-get install -y torque-scheduler"
+#ssh $MASTER "apt-get install -y torque-client"
 
 #install torque: download/unzip torque
 function installtorque {
@@ -34,7 +35,7 @@ function setuptorque {
 	ldconfig
         #./torque.setup root # Note: sets some defaults for batch queue
 	qterm
-        yes|./torque.setup root localhost # Note: sets some defaults for batch queue
+	yes|./torque.setup root localhost # Note: sets some defaults for batch queue
 
 	#WARNING: allow root to qsub for debug purposes only, may be dangerous
 	qmgr -c 'set server acl_roots+=root@*' #allow root to submit jobs
@@ -46,7 +47,7 @@ function setuptorque {
 	qmgr -c "set queue batch resources_available.nodect=$NUM_SLAVES"
 	#qmgr -c "set server resources_available.nodect=$NUM_SLAVES"
 	qterm
-        pbs_server
+	pbs_server
 
 	touch ~/.rhosts
 	echo `hostname` |cat >> ~/.rhosts
@@ -64,7 +65,7 @@ function installslaves {
 	#install torque-mom on slave nodes
 	apt-get install -y dsh
 	
-        echo "copying slave install packages to nfs"
+	echo "copying slave install packages to nfs"
 	mkdir /nfs/torque
 	cp torque-package-mom-linux-x86_64.sh /nfs/torque/torque-package-mom-linux-x86_64.sh
 	cp torque-package-mom-linux-x86_64.sh /nfs/torque/torque-package-clients-linux-x86_64.sh
@@ -73,19 +74,19 @@ function installslaves {
 	for i in `cat $SLAVES_FILE`; do ssh $i /nfs/torque/torque-package-mom-linux-x86_64.sh --install; ldconfig; done
 	for i in `cat $SLAVES_FILE`; do ssh $i /nfs/torque/torque-package-clients-linux-x86_64.sh --install; ldconfig; done
 
-	echo "Running ldconfig on slaves"
-	dsh -f $SLAVES_FILE ldconfig
+	#echo "Running ldconfig on slaves"
+	#dsh -c -f $SLAVES_FILE ldconfig
 	popd
 }
 
 function installmpi {
-        #setup mpich2 on all of the cluster nodes
-        ./setup-mpi
+  #setup mpich2 on all of the cluster nodes
+	./setup-mpi
 
-        #setup prologue script
-        cp ./prologue.setup-mpi-master /var/spool/torque/mom_priv/prologue
-        cp ./epilogue.kill-mpi-ring /var/spool/torque/mom_priv/epilogue
-        
+  #setup prologue script
+	cp ./prologue.setup-mpi-master /var/spool/torque/mom_priv/prologue
+	cp ./epilogue.kill-mpi-ring /var/spool/torque/mom_priv/epilogue
+
 	for i in `cat $SLAVES_FILE`; do scp ./prologue.setup-mpi-master $i:/var/spool/torque/mom_priv/prologue; done
 	for i in `cat $SLAVES_FILE`; do scp ./epilogue.kill-mpi-ring $i:/var/spool/torque/mom_priv/epilogue; done
 }
@@ -100,7 +101,18 @@ function installmaui {
 	./configure
 	make
 	make install
+
+  #Jobs in the queue that require more resources than currently available 
+  #will be marked as deferred by maui. This will happen frequently with 
+  #the Mesos Torque framework. The following configuration settings will 
+  #cause maui to wait only 5 seconds before it tries running deferred 
+  #jobs again.
+  echo "DEFERTIME             05" >> /usr/local/maui/maui.cfg
+  echo "DEFERCOUNT            100" >> /usr/local/maui/maui.cfg
+
+  #start maui
 	/usr/local/maui/sbin/maui
+	popd;popd
 }
 
 installtorque
