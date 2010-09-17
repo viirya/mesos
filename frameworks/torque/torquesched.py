@@ -20,14 +20,14 @@ from socket import gethostname
 
 PBS_SERVER_FILE = "/var/spool/torque/server_name"
 EVENT_LOG_FILE = "log_fw_utilization.txt"
-LOG_FILE = "log.txt"
+LOG_FILE = "fw_torque_log.txt"
 
 SCHEDULER_ITERATION = 2 #number of seconds torque waits before looping through
                         #the queue to try to match resources to jobs. default
                         #is 10min (ie 600) but we want it to be low so jobs 
                         #will run as soon as the framework has acquired enough
                         #resources
-SAFE_ALLOCATION = {"cpus":48,"mem":48*1024} #just set statically for now, 48gb 
+SAFE_ALLOCATION = {"cpus":24,"mem":24*1024} #just set statically for now, 48gb 
 MIN_SLOT_SIZE = {"cpus":"1","mem":1024} #1GB
 MIN_SLOTS_HELD = 0 #keep at least this many slots even if none are needed
 
@@ -48,7 +48,7 @@ fh.setLevel(logging.DEBUG)
 driverlog = logging.getLogger("driver_logger")
 driverlog.setLevel(logging.DEBUG)
 driverlog.addHandler(fh)
-driverlog.addHandler(ch)
+#driverlog.addHandler(ch)
 
 monitorlog = logging.getLogger("monitor_logger")
 monitorlog.setLevel(logging.DEBUG)
@@ -83,36 +83,47 @@ class MyScheduler(mesos.Scheduler):
     driverlog.debug("Got slot offer %s" % oid)
     self.lock.acquire()
     driverlog.debug("resourceOffer() acquired lock")
+    at_safe_alloc, nodes_used, no_more_needed = 0, 0, 0
     tasks = []
     for offer in slave_offers:
       # if we haven't registered this node, accept slot & register w pbs_server
       #TODO: check to see if slot is big enough 
       if self.numToRegister <= 0:
-        driverlog.debug("Rejecting slot, no need for more slaves")
-        continue
-      if offer.host in self.servers.values():
-        driverlog.debug("Rejecting slot, already registered node " + offer.host)
-        continue
-      if len(self.servers) >= SAFE_ALLOCATION["cpus"]:
-        driverlog.debug("Rejecting slot, already at safe allocation (i.e. %d CPUS)" % SAFE_ALLOCATION["cpus"])
-        continue
-      driverlog.info("Need %d more nodes, so accepting slot, setting up params for it..." % self.numToRegister)
-      params = {"cpus": "1", "mem": "1024"}
-      td = mesos.TaskDescription(
-          self.id, offer.slaveId, "task %d" % self.id, params, "")
-      tasks.append(td)
-      self.servers[self.id] = offer.host
-      self.regComputeNode(offer.host)
-      self.numToRegister -= 1
-      self.id += 1
-      driverlog.info("writing logfile")
-      eventlog.info("%d %d" % (time.time(),len(self.servers)))
-      driverlog.info("done writing logfile")
-      driverlog.info("self.id now set to " + str(self.id))
+        no_more_needed += 1
+      elif offer.host in self.servers.values():
+        nodes_used += 1
+      elif len(self.servers) >= SAFE_ALLOCATION["cpus"]:
+        at_safe_alloc += 1
+      else:
+        driverlog.info("Need %d more nodes, so accepting slot, setting up params for it..." % self.numToRegister)
+        params = {"cpus": "1", "mem": "1024"}
+        td = mesos.TaskDescription(
+            self.id, offer.slaveId, "task %d" % self.id, params, "")
+        driverlog.info("Accepting task, id=" + str(self.id) + ", params: " +
+                       params['cpus'] + " CPUS, and " + params['mem'] +
+                       " MB, on node " + offer.host)
+        tasks.append(td)
+        self.servers[self.id] = offer.host
+        self.regComputeNode(offer.host)
+        self.numToRegister -= 1
+        self.id += 1
+        driverlog.debug("writing logfile")
+        eventlog.info("%d %d" % (time.time(),len(self.servers)))
+        driverlog.debug("done writing logfile")
+        driverlog.info("self.id now set to " + str(self.id))
     #print "---"
-    print "replying to offer, accepting %d tasks: %s" % (len(tasks), str(tasks))
+    driverlog.debug("Replying to offer, accepting %d tasks." % len(tasks))
     #driver.replyToOffer(oid, tasks, {"timeout": "1"})
     driver.replyToOffer(oid, tasks, {})
+    if nodes_used > 0:
+      driverlog.debug(("Rejecting %d slots because we've launched servers " +
+                      "on those machines already.") % nodes_used)
+    if no_more_needed > 0:
+      driverlog.debug(("Rejecting %d slot because we've launched enough " +
+                      "tasks.") % no_more_needed)
+    if at_safe_alloc > 0:
+      driverlog.debug(("Rejecting slot, already at safe allocation (i.e. %d " + 
+                      "CPUS)") % SAFE_ALLOCATION["cpus"])
     self.lock.release()
     driverlog.debug("resourceOffer() finished, released lock\n\n")
 
@@ -174,27 +185,28 @@ def monitor(sched):
     time.sleep(1)
     monitorlog.debug("monitor thread acquiring lock")
     sched.lock.acquire()
-    monitorlog.debug("computing num nodes needed to satisfy eligable jobs in queue")
+    monitorlog.debug("Computing num nodes needed to satisfy eligable " +
+                     "jobs in queue")
     needed = 0
     jobs = torquelib.getActiveJobs()
-    monitorlog.debug("retreived jobs in queue, count: %d" % len(jobs))
+    monitorlog.debug("Retreived jobs in queue, count: %d" % len(jobs))
     for j in jobs:
       #WARNING: this check should only be used if torque is using fifo queue
       #if needed + j.needsnodes <= SAFE_ALLOCATION:
-      monitorlog.debug("job resource list is: " + str(j.resourceList))
+      monitorlog.debug("Job resource list is: " + str(j.resourceList))
       needed += int(j.resourceList["nodect"])
-    monitorlog.debug("number of nodes needed by jobs in queue: %d" % needed)
     numToRelease = len(sched.servers) - needed
-    monitorlog.debug("number of nodes to release is %d - %d" % (len(sched.servers),needed))
+    monitorlog.debug(("Number of nodes to release is %d - %d = %d.") 
+                     % (len(sched.servers), needed, numToRelease))
     if numToRelease > 0:
       sched.unregNNodes(numToRelease)
       sched.numToRegister = 0
     else:
-      monitorlog.debug("monitor updating sched.numToRegister from %d to %d" % (sched.numToRegister, numToRelease * -1))
+      monitorlog.debug(("Monitor updating sched.numToRegister from %d to %d.") 
+                       % (sched.numToRegister, numToRelease * -1))
       sched.numToRegister = numToRelease * -1
     sched.lock.release()
-    monitorlog.debug("monitor thread releasing lock")
-    monitorlog.debug("\n")
+    monitorlog.debug("Monitor thread releasing lock.\n")
 
 if __name__ == "__main__":
   parser = OptionParser(usage = "Usage: %prog mesos_master")
