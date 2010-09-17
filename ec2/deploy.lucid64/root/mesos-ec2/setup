@@ -203,7 +203,9 @@ $HADOOP_HOME/bin/start-dfs.sh
 if [ "$FRAMEWORKS" ]; then
   echo "Running framework specific setup scripts for frameworks: $FRAMEWORKS"
   for i in ${FRAMEWORKS//,/ }; do
-    echo running ./framework-setup/$i/setup-$i
+    echo "Setting executable permissions on ./framework-setup/$i/setup-$i"
+    chmod u+x ./framework-setup/$i/setup-$i
+    echo "Running ./framework-setup/$i/setup-$i"
     ./framework-setup/$i/setup-$i
   done
 fi

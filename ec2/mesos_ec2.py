@@ -51,7 +51,7 @@ def parse_args():
   parser.add_option("-n", "--num-masters", metavar="NUM_MASTERS", default="1",
       help="Number of masters to run. Default is 1. " + 
            "Greater values cause Mesos to run in FT mode with ZooKeeper.")
-  parser.add_option("-f", "--framewoks", metavar="FRAMEWORK_NAMES",
+  parser.add_option("-f", "--frameworks", metavar="FRAMEWORK_NAMES",
       default="none", help="Used to specify which framework specific setup " +
       "scripts should run. These scripts are located in " +
       "~/mesos-ec2/framework-setup/<framework-name>. " +
