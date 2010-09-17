@@ -33,7 +33,7 @@ function setuptorque {
 	pushd ~/torque-2.4.7
 	echo "running ldconfig on master"
 	ldconfig
-        #./torque.setup root # Note: sets some defaults for batch queue
+	#./torque.setup root # Note: sets some defaults for batch queue
 	qterm
 	yes|./torque.setup root localhost # Note: sets some defaults for batch queue
 
@@ -64,7 +64,6 @@ function installslaves {
 	make packages
 	#install torque-mom on slave nodes
 	apt-get install -y dsh
-	
 	echo "copying slave install packages to nfs"
 	mkdir /nfs/torque
 	cp torque-package-mom-linux-x86_64.sh /nfs/torque/torque-package-mom-linux-x86_64.sh
@@ -80,15 +79,21 @@ function installslaves {
 }
 
 function installmpi {
-  #setup mpich2 on all of the cluster nodes
+	pushd `dirname $0`
+	#setup mpich2 on all of the cluster nodes
 	./setup-mpi
 
-  #setup prologue script
+	#setup prologue script
 	cp ./prologue.setup-mpi-master /var/spool/torque/mom_priv/prologue
 	cp ./epilogue.kill-mpi-ring /var/spool/torque/mom_priv/epilogue
 
-	for i in `cat $SLAVES_FILE`; do scp ./prologue.setup-mpi-master $i:/var/spool/torque/mom_priv/prologue; done
-	for i in `cat $SLAVES_FILE`; do scp ./epilogue.kill-mpi-ring $i:/var/spool/torque/mom_priv/epilogue; done
+	for i in `cat $SLAVES_FILE`; do
+		scp ./prologue.setup-mpi-master $i:/var/spool/torque/mom_priv/prologue
+	done
+	for i in `cat $SLAVES_FILE`; do 
+		scp ./epilogue.kill-mpi-ring $i:/var/spool/torque/mom_priv/epilogue
+	done
+	popd
 }
 
 function installmaui {
@@ -102,21 +107,21 @@ function installmaui {
 	make
 	make install
 
-  #Jobs in the queue that require more resources than currently available 
-  #will be marked as deferred by maui. This will happen frequently with 
-  #the Mesos Torque framework. The following configuration settings will 
-  #cause maui to wait only 5 seconds before it tries running deferred 
-  #jobs again.
-  echo "DEFERTIME             05" >> /usr/local/maui/maui.cfg
-  echo "DEFERCOUNT            100" >> /usr/local/maui/maui.cfg
-
-  #start maui
+	#Jobs in the queue that require more resources than currently available 
+	#will be marked as deferred by maui. This will happen frequently with 
+	#the Mesos Torque framework. The following configuration settings will 
+	#cause maui to wait only 5 seconds before it tries running deferred 
+	#jobs again.
+	echo "DEFERTIME             05" >> /usr/local/maui/maui.cfg
+	echo "DEFERCOUNT            100" >> /usr/local/maui/maui.cfg
+ 
+	#start maui
 	/usr/local/maui/sbin/maui
 	popd;popd
 }
 
-installtorque
-setuptorque
-installslaves
+#installtorque
+#setuptorque
+#installslaves
 installmpi
-installmaui
+#installmaui
