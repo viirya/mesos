@@ -27,7 +27,8 @@ def parse_args():
   parser.add_option("-i", "--identity-file", 
       help="SSH private key file to use for logging into instances")
   parser.add_option("-t", "--instance-type", default="m1.large",
-      help="Type of instance to launch (default: m1.large). WARNING: must be 64 bit, thus small instances won't work")
+      help="Type of instance to launch (default: m1.large). WARNING: must " +
+           "be 64 bit, thus small instances won't work")
   parser.add_option("-m", "--master-instance-type", default="",
       help="Master instance type (leave empty for same as instance-type)")
   parser.add_option("-z", "--zone", default="us-east-1b",
@@ -47,11 +48,16 @@ def parse_args():
   parser.add_option("--resume", action="store_true", default=False,
       help="Resume installation on a previously launched cluster " +
            "(for debugging)")
-  parser.add_option("-f", "--ft", metavar="NUM_MASTERS", default="1", 
+  parser.add_option("-n", "--num-masters", metavar="NUM_MASTERS", default="1",
       help="Number of masters to run. Default is 1. " + 
            "Greater values cause Mesos to run in FT mode with ZooKeeper.")
+  parser.add_option("-f", "--framewoks", metavar="FRAMEWORK_NAMES",
+      default="none", help="Used to specify which framework specific setup " +
+      "scripts should run. These scripts are located in " +
+      "~/mesos-ec2/framework-setup/<framework-name>. " +
+      "FRAMEWORK_NAMES is a Comma seperated list of framework names.")
   (opts, args) = parser.parse_args()
-  opts.ft = int(opts.ft)
+  opts.num_masters = int(opts.num_masters)
   if len(args) != 2:
     parser.print_help()
     sys.exit(1)
@@ -158,10 +164,10 @@ def launch_cluster(conn, opts, cluster_name):
                          security_groups = [master_group],
                          instance_type = master_type,
                          placement = opts.zone,
-                         min_count = opts.ft,
-                         max_count = opts.ft)
+                         min_count = opts.num_masters,
+                         max_count = opts.num_masters)
   print "Launched master, regid = " + master_res.id
-  if opts.ft > 1:
+  if opts.num_masters > 1:
     zoo_res = image.run(key_name = opts.key_pair,
                         security_groups = [zoo_group],
                         instance_type = opts.instance_type,
@@ -217,7 +223,7 @@ def deploy_files(conn, root_dir, instance, opts, master_res, slave_res, zoo_res)
     "slave_list" : '\n'.join([i.public_dns_name for i in slave_res.instances])
   }
 
-  if opts.ft > 1:
+  if opts.num_masters > 1:
     zoo = zoo_res.instances[0].public_dns_name
     template_vars[ "zoo" ] = '\n'.join([i.public_dns_name for i in zoo_res.instances])
     template_vars[ "master_url" ] = ','.join([(i.public_dns_name + ":2181/mesos") for i in zoo_res.instances])
@@ -266,7 +272,7 @@ def main():
       time.sleep(5)
       wait_for_instances(conn, master_res)
       wait_for_instances(conn, slave_res)
-      if opts.ft > 1:
+      if opts.num_masters > 1:
         wait_for_instances(conn, zoo_res)
       print "Waiting 20 more seconds..."
       time.sleep(20)
@@ -279,7 +285,7 @@ def main():
     scp(master, opts, opts.identity_file, '/root/.ssh/id_rsa')
     print "Running setup on master..."
     ssh(master, opts, "chmod u+x mesos-ec2/setup")
-    ssh(master, opts, "mesos-ec2/setup %s %s %s" % (opts.os, opts.download, opts.branch))
+    ssh(master, opts, "mesos-ec2/setup %s %s %s %s" % (opts.os, opts.download, opts.branch, opts.frameworks))
     print "Done!"
   elif action == "shutdown":
     response = raw_input("Are you sure you want to shut down the cluster " +
@@ -290,7 +296,7 @@ def main():
       master_res.stop_all()
       print "Shutting down slaves..."
       slave_res.stop_all()
-      if opts.ft > 1:
+      if opts.num_masters > 1:
         print "Shutting down zoo..."
         zoo_res.stop_all()
   elif action == "login":

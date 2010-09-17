@@ -6,6 +6,7 @@ cd /root/mesos-ec2
 OS_NAME=$1
 DOWNLOAD_METHOD=$2
 BRANCH=$3
+FRAMEWORKS=$4
 
 # By exporting this git won't ask to accept a key.
 export GIT_SSH=/root/mesos-ec2/ssh-no-keychecking
@@ -198,6 +199,14 @@ $HADOOP_HOME/bin/hadoop namenode -format
 
 echo "Starting HDFS..."
 $HADOOP_HOME/bin/start-dfs.sh
+
+if [ "$FRAMEWORKS" ]; then
+  echo "Running framework specific setup scripts for frameworks: $FRAMEWORKS"
+  for i in ${FRAMEWORKS//,/ }; do
+    echo running ./framework-setup/$i/setup-$i
+    ./framework-setup/$i/setup-$i
+  done
+fi
 
 echo "Starting Mesos cluster..."
 ./start-mesos
