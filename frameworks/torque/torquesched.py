@@ -28,7 +28,7 @@ SCHEDULER_ITERATION = 2 #number of seconds torque waits before looping through
                         #will run as soon as the framework has acquired enough
                         #resources
 SAFE_ALLOCATION = {"cpus":24,"mem":24*1024} #just set statically for now, 48gb 
-MIN_SLOT_SIZE = {"cpus":"1","mem":1024} #1GB
+TASK_SIZE = {"cpus":"1","mem":"1024"} #1GB
 MIN_SLOTS_HELD = 0 #keep at least this many slots even if none are needed
 
 eventlog = logging.getLogger("event_logger")
@@ -94,9 +94,20 @@ class MyScheduler(mesos.Scheduler):
         nodes_used += 1
       elif len(self.servers) >= SAFE_ALLOCATION["cpus"]:
         at_safe_alloc += 1
+      elif int(offer.params['mem']) < int(TASK_SIZE["mem"]):
+        print "Rejecting offer because it doesn't contain enough memory" + \
+              "(it has " + offer.params['mem'] + " and we need " + \
+              TASK_SIZE["mem"] + "."
+        pass
+      elif int(offer.params['cpus']) < int(TASK_SIZE["cpus"]):
+        print "Rejecting offer because it doesn't contain enough CPUs " + \
+              "(it has " + offer.params['cpus'] + " and we need " + \
+              TASK_SIZE['cpus'] + "."
+        pass
       else:
         driverlog.info("Need %d more nodes, so accepting slot, setting up params for it..." % self.numToRegister)
-        params = {"cpus": "1", "mem": "1024"}
+        #params = {"cpus": "1", "mem": "1024"}
+        params = TASK_SIZE
         td = mesos.TaskDescription(
             self.id, offer.slaveId, "task %d" % self.id, params, "")
         driverlog.info("Accepting task, id=" + str(self.id) + ", params: " +

@@ -1,0 +1,11 @@
+#! /usr/bin/env sh 
+#PBS -l nodes=8
+
+OUT_FILE=$PBS_JOBNAME-$PBS_JOBID-xhpl.out
+
+(date
+cd /nfs/hpl/8node/ 
+mpiexec -n 8 /nfs/hpl/8node/xhpl
+date) > /root/$OUT_FILE
+
+/root/hadoop-0.20.2/bin/hadoop dfs -put /root/$OUT_FILE $OUT_FILE
