@@ -22,7 +22,7 @@
 
 echo submitting 1st 12 node job
 qsub -N 12_node.1 ./hpl-12node.qsub
-#sleep 3
+sleep 3
 
 echo submitting first 24 node job
 qsub -N 24_node.1 ./hpl-24node.qsub
@@ -34,19 +34,19 @@ sleep 5
 
 echo submitting 1st 8 node job
 qsub -N 8_node.1 ./hpl-8node.qsub
-#sleep 60*10 
+sleep $((60*10))
 
 echo submitting 2nd 8 node job
 qsub -N 8_node.2 ./hpl-8node.qsub
-#sleep 60*2
+sleep $((60*2))
 
 echo submitting 3rd 8 node job
 qsub -N 8_node.3 ./hpl-8node.qsub
-#sleep 10 
+sleep 10 
 
 echo submitting 2nd 12 node job
 qsub -N 12_node.2 ./hpl-12node.qsub
-#sleep 3
+sleep 3
 
 echo submitting 4th 8 node job
 qsub -N 8_node.4 ./hpl-8node.qsub
