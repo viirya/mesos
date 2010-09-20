@@ -1,7 +1,27 @@
 #!/usr/bin/env bash
 
-yes|apt-get install libatlas-base-dev
-yes|apt-get install libgfortran3
+#setup the build and run env for hpl
+#yes|apt-get install libatlas-base-dev
+#yes|apt-get install libgfortran3
+#
+#dsh -c -f /root/mesos-ec2/slaves "yes|apt-get install libatlas-base-dev"
+#dsh -c -f /root/mesos-ec2/slaves "yes|apt-get install libgfortran3"
 
-dsh -c -f /root/mesos-ec2/slaves "yes|apt-get install libatlas-base-dev"
-dsh -c -f /root/mesos-ec2/slaves "yes|apt-get install libgfortran3"
+#set up the experiments
+mkdir /nfs/hpl
+cp -R /root/mesos/frameworks/torque/mesos-hpl/hpl-jobs/* /nfs/hpl
+
+#download and build hpl
+pushd ~
+if [ ! -e hpl-mesos.tar.gz ]; then
+  echo "downloading mesos hpl bundle"
+  wget http://mesos.berkeley.edu/hpl-mesos.tar.gz
+fi
+tar xzf hpl-mesos.tar.gz
+cd hpl
+
+make arch=Linux_PII_CBLAS
+for i in `ls /nfs/hpl`; do
+  echo "copying xhpl to /nfs/hpl/$i"
+  cp bin/Linux_PII_CBLAS/xhpl /nfs/hpl/$i
+done

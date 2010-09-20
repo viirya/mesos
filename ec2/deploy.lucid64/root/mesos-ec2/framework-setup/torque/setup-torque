@@ -1,7 +1,5 @@
 #!/bin/bash
 
-cd /root/mesos-ec2
-
 SLAVES_FILE="/root/mesos-ec2/slaves"
 MASTERS_FILE="/root/mesos-ec2/masters"
 MASTERS="`cat $MASTERS_FILE`"
@@ -116,12 +114,14 @@ function installmaui {
 	echo "DEFERCOUNT            100" >> /usr/local/maui/maui.cfg
  
 	#start maui
-	/usr/local/maui/sbin/maui
+  #TODO(*):Get maui to work as well as FIFO queue, so that we can start
+  #        it by default. For now, install but don't run maui
+	#/usr/local/maui/sbin/maui
 	popd;popd
 }
 
-#installtorque
-#setuptorque
-#installslaves
+installtorque
+setuptorque
+installslaves
 installmpi
-#installmaui
+installmaui
