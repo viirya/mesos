@@ -1,0 +1,47 @@
+# defaults file for mesos-slave daemon mode
+
+# start mesos-slave in daemon mode from init.d script?
+#  only allowed values are "true", "false", and "inetd"
+#  Use "inetd" if you want to start the mesos-slaved from inetd,
+#  all this does is prevent the init.d script from printing a message
+#  about not starting the mesos-slave daemon (you still need to modify 
+#  inetd's config yourself).
+MESOS_ENABLE=true
+
+# which file dir should be used as the configuration file for mesos-slave.
+# This file is used instead of the default /etc/mesos-slaved.conf
+# Warning: This option has no effect if the daemon is accessed
+#          using a remote shell. When using a different file for
+#          mesos-slave you might want to symlink /etc/mesos-slaved.conf to
+#          that file.
+# MESOS_CONFIG_DIR=
+
+# what extra options to give mesos-slave? See mesos-slave --help
+#  Possibilities are:
+#   --port=8730				(bind to specified port; default 873)
+#   --conf=VAL                       Specifies a config directory from which to
+#                                    read Mesos config files. The Mesos binaries
+#                                    use <install location>/conf by default
+#   --cpus=VAL (or -c VAL)           CPU cores for use by tasks (default: 1)
+#   --hadoop_home=VAL                Where to find Hadoop installed (for fetching
+#                                    framework executors from HDFS)
+#                                    (default: look for HADOOP_HOME environment
+#                                    variable or find hadoop on PATH)
+#   --isolation=VAL (or -i VAL)      Isolation module name (default: process)
+#   --log_dir=VAL                    Where to put logs (default: MESOS_HOME/logs)
+#   --mem=VAL (or -m VAL)            Memory for use by tasks, in MB
+#                                    (default: 1024)
+#   --[no-]quiet (or -[no-]q)        Disable logging to stderr (default: false)
+#   --[no-]switch_user               Whether to run tasks as the user who
+#                                    submitted them rather than the user running
+#                                    the slave (requires setuid permission)
+#                                    (default: true)
+#   --url=VAL (or -u VAL)            Master URL
+#   --webui_port=VAL (or -w VAL)     Web UI port (default: 8081)
+#   --work_dir=VAL                   Where to place framework work directories
+#                                    (default: MESOS_HOME/work)
+
+MESOS_OPTS=''
+
+# Don't forget to create an appropriate config file,
+# else the daemon will not start.

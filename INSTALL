@@ -1,0 +1,13 @@
+Instructions for getting Mesos running out of the box can be found on the github wiki at: http://github.com/mesos/mesos/wiki.
+
+This document is intended to describe how to "install" Mesos to the canonical location in Linux. Mesos can be integrated into Linux System-V style daemon management by use of the files mesos-slave-init-d and mesos-slave-default. To set this up, do the following:
+
+./configure
+make
+make install
+#create and edit /usr/local/mesos/conf/mesos.conf to contain the following line:
+#url=1@my-mesos-master:<master-port>
+cp src/deploy/mesos-slave-init-d /etc/init.d/mesos-slave
+cp src/deploy/mesos-slave-default /etc/default/mesos-slave
+update-rc.d mesos-slave defaults # this causes the mesos-slave daemon to be run at system startup
+
