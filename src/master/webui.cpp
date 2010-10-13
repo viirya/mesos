@@ -3,8 +3,8 @@
 #include <sstream>
 #include <string>
 
-#include "webui.hpp"
 #include "state.hpp"
+#include "webui.hpp"
 
 #ifdef MESOS_WEBUI
 
@@ -18,23 +18,29 @@ extern "C" void init_master();  // Initializer for the Python master module
 namespace {
 
 PID master;
-string webuiPort;
-string logDir;
 
 }
 
 namespace mesos { namespace internal { namespace master {
 
+using namespace std;
+
+struct webuiArgs {
+  string webuiPort;
+  string logDir;
+  string sqliteEnabled;
+} myWebuiArgs;
 
 void *runMasterWebUI(void *)
 {
   LOG(INFO) << "Web UI thread started";
   Py_Initialize();
-  char* argv[3];
+  char* argv[4];
   argv[0] = const_cast<char*>("webui/master/webui.py");
-  argv[1] = const_cast<char*>(webuiPort.c_str());
-  argv[2] = const_cast<char*>(logDir.c_str());
-  PySys_SetArgv(3, argv);
+  argv[1] = const_cast<char*>(myWebuiArgs.webuiPort.c_str());
+  argv[2] = const_cast<char*>(myWebuiArgs.logDir.c_str());
+  argv[3] = const_cast<char*>(myWebuiArgs.sqliteEnabled.c_str());
+  PySys_SetArgv(4, argv);
   PyRun_SimpleString("import sys\n"
       "sys.path.append('webui/master/swig')\n"
       "sys.path.append('webui/common')\n"
@@ -57,10 +63,16 @@ void startMasterWebUI(const PID &master, const Params &params)
   // all of the configuration options have been set (from defaults or
   // from the command line, environment, or configuration file) and we
   // can just query what their values are.
-  webuiPort = params.get("webui_port", "8080");
-  logDir = params.get("log_dir", FLAGS_log_dir);
-
-  LOG(INFO) << "Starting master web UI on port " << webuiPort;
+  LOG(INFO) << "Starting master web UI on port " << myWebuiArgs.webuiPort;
+  myWebuiArgs.webuiPort = params.get("webui_port","8080");
+  myWebuiArgs.logDir = params.get("log_dir",FLAGS_log_dir); 
+  if (params.get("event-history-sqlite",false)) {
+    myWebuiArgs.sqliteEnabled = "true";
+  } else {
+    myWebuiArgs.sqliteEnabled = "false";
+  }
+  LOG(INFO) << "Starting master web UI on port " << myWebuiArgs.webuiPort
+            << ", using log_dir:" << myWebuiArgs.logDir;
 
   ::master = master;
   pthread_t thread;
