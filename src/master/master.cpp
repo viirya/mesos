@@ -124,7 +124,6 @@ Master::Master(EventLogger* evLogger_)
     nextSlotOfferId(0), masterId(0)
 {
   allocatorType = "simple";
-  cout << "event logger create" << cout;
 }
 
 
@@ -322,8 +321,12 @@ void Master::operator () ()
               1, "Root is not allowed to submit jobs on this cluster"));
         delete framework;
         break;
+
       }
 
+      cout << "About to register framework with event history" << endl;
+      evLogger->logFrameworkRegistered(fid, framework->user);
+      cout << "Registered framework with event history" << endl;
       addFramework(framework);
       break;
     }

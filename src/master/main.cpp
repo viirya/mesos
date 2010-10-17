@@ -57,7 +57,9 @@ int main(int argc, char **argv)
 
   Logging::init(argv[0], params);
 
-  EventLogger evLogger;
+  cout << "Creating event logger." << endl;
+  EventLogger evLogger(params);
+  cout << "Done creating event logger." << endl;
 
   if (params.contains("port"))
     setenv("LIBPROCESS_PORT", params["port"].c_str(), 1);

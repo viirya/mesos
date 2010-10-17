@@ -6,9 +6,89 @@
 <html>
 <head>
 <title>Mesos Master on {{HOSTNAME}}</title>
+<!-- Combo-handled YUI CSS files: -->
+%if sqlite_enabled:
+<link rel="stylesheet" type="text/css" href="/yui_2.8.1/build/paginator/assets/skins/sam/paginator.css">
+<link rel="stylesheet" type="text/css" href="/yui_2.8.1/build/datatable/assets/skins/sam/datatable.css">
+
+<!-- Combo-handled YUI JS files: -->
+<script type="text/javascript" src="/yui_2.8.1/build/yahoo-dom-event/yahoo-dom-event.js"></script>
+<script type="text/javascript" src="/yui_2.8.1/build/connection/connection-min.js"></script>
+<script type="text/javascript" src="/yui_2.8.1/build/datasource/datasource-min.js"></script>
+<script type="text/javascript" src="/yui_2.8.1/build/element/element-min.js"></script>
+<script type="text/javascript" src="/yui_2.8.1/build/paginator/paginator-min.js"></script>
+<script type="text/javascript" src="/yui_2.8.1/build/datatable/datatable-min.js"></script>
+<script type="text/javascript" src="/yui_2.8.1/build/history/history-min.js"></script>
+<script type="text/javascript" src="/yui_2.8.1/build/json/json-min.js"></script>
+
+<script type='text/javascript'>
+// Custom parser 
+var timestampToDate = function(sTimestamp) { 
+  //convert from microseconds to milliseconds
+  return new Date(sTimestamp/1000); 
+}; 
+
+//SETUP FRAMEWORKS TABLE
+YAHOO.util.Event.addListener(window, "load", function() {
+  YAHOO.example.XHR_JSON = new function() {
+    // Override the built-in formatter
+    YAHOO.widget.DataTable.formatLink = function(elLiner, oRecord, 
+                                                 oColumn, oData)
+    {
+      var fwid = oData;
+      elLiner.innerHTML = "<a href=\"framework/" + fwid 
+                        + "\">" + fwid + "</a>";
+    };
+
+    var formatTime = function(elLiner, oRecord, oColumn, oData) {
+      var mydate = oData;
+      elLiner.innerHTML = (mydate.getMonth()+1).toString() + "/" 
+      + mydate.getDate() + "/" + mydate.getFullYear() + " " 
+      + mydate.getHours() + ":" + mydate.getMinutes() + ":" 
+      + mydate.getSeconds() + ":" + mydate.getMilliseconds();
+    };
+
+    var myColumnDefs = [
+      {key:"fwid", label:"FW ID", sortable:true, 
+          formatter:YAHOO.widget.DataTable.formatLink},
+      {key:"user", label:"User", sortable:true},
+      {key:"datetime_registered", label:"Date-time created", sortable:true, 
+          formatter:formatTime} 
+    ];
+     
+    // DataSource instance
+    myFwDataSource = new YAHOO.util.DataSource("frameworks_json");
+    myFwDataSource.responseType = YAHOO.util.DataSource.TYPE_JSON;
+    myFwDataSource.connXhrMode = "queueRequests";
+    myFwDataSource.responseSchema = {
+      resultsList: "ResultSet.Items",
+      fields: ["fwid","user",{key:"datetime_registered",
+          parser:timestampToDate}]
+    };
+
+    // DataTable configurations
+    var myConfig = {
+      // Create the Paginator
+      paginator: new YAHOO.widget.Paginator({
+        template : "{PreviousPageLink} {CurrentPageReport} "
+                 + "{NextPageLink} {RowsPerPageDropdown}",
+        pageReportTemplate : "Showing items {startIndex} - {endIndex} of "
+                           + "{totalRecords}",
+        rowsPerPage: 20,
+        rowsPerPageOptions: [20,50,100,200,500]
+      }),
+      sortedBy:{key:"datetime_registered", dir:"desc"}
+    }; 
+
+    this.myDataTable = new YAHOO.widget.DataTable("frameworks_table",
+        myColumnDefs, myFwDataSource, myConfig);
+  };
+});
+</script>
+%end
 <link rel="stylesheet" type="text/css" href="/static/stylesheet.css" />
 </head>
-<body>
+<body class="yui-skin-sam">
 
 <h1>Mesos Master on {{HOSTNAME}}</h1>
 
@@ -18,7 +98,7 @@ Started: {{format_time(start_time)}}<br />
 PID: {{master.pid}}<br />
 Slaves: {{master.slaves.size()}}<br />
 Frameworks: {{master.frameworks.size()}}<br />
-Fault-tolerant: {{master.isFT}}<br />
+SQLite event logging enabled: {{sqlite_enabled}}<br />
 </p>
 
 <p>
@@ -65,7 +145,7 @@ Offered: {{offered_cpus}} CPUs, {{format_mem(offered_mem)}} MEM<br />
 Idle: {{idle_cpus}} CPUs, {{format_mem(idle_mem)}} MEM<br />
 </p>
 
-<h2>Frameworks</h2>
+<h2>Running Frameworks</h2>
 
 %# TODO: Sort these by framework ID
 %if master.frameworks.size() > 0:
@@ -106,7 +186,7 @@ Idle: {{idle_cpus}} CPUs, {{format_mem(idle_mem)}} MEM<br />
   <p>No frameworks are connected.</p>
 %end
 
-<h2>Slaves</h2>
+<h2>Current Slaves</h2>
 
 %# TODO: Sort these by slave ID
 %if master.slaves.size() > 0:
@@ -121,7 +201,7 @@ Idle: {{idle_cpus}} CPUs, {{format_mem(idle_mem)}} MEM<br />
   %for s in master.slaves:
     <tr>
     <td>{{s.id}}</td>
-    <td><a href="http://{{s.public_dns}}:8081/">{{s.public_dns}}</a></td>
+    <td><a href="http://{{s.web_ui_url}}">{{s.web_ui_url}}</a></td>
     <td>{{s.cpus}}</td>
     <td>{{format_mem(s.mem)}}</td>
     <td>{{format_time(s.connect_time)}}</td>
@@ -132,7 +212,7 @@ Idle: {{idle_cpus}} CPUs, {{format_mem(idle_mem)}} MEM<br />
   <p>No slaves are connected.</p>
 %end
 
-<h2>Resource Offers</h2>
+<h2>Outstanding Resource Offers</h2>
 
 %# TODO: Sort these by slot offer ID
 %if offered_cpus > 0 or offered_mem > 0:
@@ -166,6 +246,11 @@ Idle: {{idle_cpus}} CPUs, {{format_mem(idle_mem)}} MEM<br />
   </table>
 %else:
   <p>No offers are active.</p>
+%end
+
+%if sqlite_enabled:
+<h2>Framework History</h2>
+<div id="frameworks_table"></div>
 %end
 
 </body>
