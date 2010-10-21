@@ -1,6 +1,28 @@
 Instructions for getting Mesos running out of the box can be found on the github wiki at: http://github.com/mesos/mesos/wiki.
 
-This document is intended to describe how to "install" Mesos to the canonical location in Linux. Mesos can be integrated into Linux System-V style daemon management by use of the files mesos-slave-init-d and mesos-slave-default. To set this up, do the following:
+Running out of the box:
+-----------------------
+1) Download 
+2) ./configure (use ./configure --help to see options, also you can use ./configure.template.<your-architecture> for some known architectures.
+3) ./make
+
+Now you should be able to run the mesos binaries that were put into the bin directory.
+
+Running a Mesos cluster on EC2:
+-------------------------------
+1) Launch a mesos master, view the master's webui and copy down its LibProcess PID, in the form 1@<IP_ADD>:<PORT_NUM>
+2) Run the following command to launch a slave using our mesos-slave-ami:
+      ec2-run-instances ami-XXXXX -d url=<MASTER_PID>
+   This slave should automatically join the running master.
+
+
+Installing as a production deployment:
+--------------------------------------
+NOTE: This functionality has only been tested on Linux so far.
+The Mesos maste and slave binaries can also be installed to be run as a daemons. To do this, Mesos can be integrated into Linux System-V style daemon management by use of the files mesos-slave-init-d and mesos-slave-default. To set this up, do the following:
+
+
+== Setting up the mesos-slave as a daemon ==
 
 ./configure
 make
@@ -11,3 +33,7 @@ cp src/deploy/mesos-slave-init-d /etc/init.d/mesos-slave
 cp src/deploy/mesos-slave-default /etc/default/mesos-slave
 update-rc.d mesos-slave defaults # this causes the mesos-slave daemon to be run at system startup
 
+
+== Setting up the mesos-master as a daemon ==
+
+This is not yet very functional

@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 ### BEGIN INIT INFO
 # Provides:          mesos-slave
@@ -15,11 +15,12 @@
 
 # /etc/init.d/mesos-slave: start and stop the mesos-slave daemon
 
-DAEMON=/usr/local/mesos/bin/mesos-slave
+DAEMON='/usr/local/mesos/bin/mesos-slave'
 MESOS_ENABLE=false
 MESOS_OPTS=''
 MESOS_DEFAULTS_FILE=/etc/default/mesos-slave
 MESOS_CONFIG_DIR=/usr/local/mesos/conf
+MESOS_CONFIG_FILE=$MESOS_CONFIG_DIR/mesos.conf
 MESOS_PID_FILE=/var/run/mesos-slave.pid
 
 test -x $DAEMON || exit 0
@@ -43,14 +44,33 @@ export PATH="${PATH:+$PATH:}/usr/sbin:/sbin"
 
 mesosslave_start() {
     if [ ! -d "$MESOS_CONFIG_DIR" ]; then
-        log_failure_msg "missing or empty config file $MESOS_CONFIG_FILE"
-        log_end_msg 1
-        exit 1
+        mkdir -p $MESOS_CONFIG_DIR
     fi
-    if start-stop-daemon --start \
+
+    # If this is ec2, update conf file with any user-data.
+    # This is how we get the master URL.
+    grep url $MESOS_CONFIG_FILE > /dev/null
+    if [ $? != 0 ]; then
+      curl -f http://169.254.169.254/1.0/user-data >> $MESOS_CONFIG_FILE
+    fi
+
+    ulimit -n 8192
+
+    PROGRAM=$1
+    shift
+
+    MESOS_OPTS=""
+    # Compute CPU and memory resources on this machine (TODO: Linux-specific)
+    if [ `uname` == "Linux" ]; then
+      CPUS=`grep processor /proc/cpuinfo | wc -l`
+      MEM_KB=`cat /proc/meminfo | grep MemTotal | awk '{print $2}'`
+      MEM=$[(MEM_KB - 1024 * 1024) / 1024] # Leaves 1 GB free
+      MESOS_OPTS="--cpus=$CPUS --mem=$MEM"
+    fi
+
+    if start-stop-daemon --start --background \
         --pidfile $MESOS_PID_FILE --make-pidfile \
-        --exec $DAEMON -- --conf=$MESOS_CONFIG_DIR \
-        $RSYNC_OPTS
+        --exec $DAEMON -- $MESOS_OPTS conf=$MESOS_CONFIG_DIR
     then
         rc=0
         sleep 1
@@ -107,7 +127,7 @@ case "$1" in
 		sleep 1
 	    else
 		log_warning_msg "mesos-slave daemon not running, attempting to start."
-	    	rm -f $MESOS_PID_FILE
+		rm -f $MESOS_PID_FILE
 	    fi
             mesosslave_start
         else
