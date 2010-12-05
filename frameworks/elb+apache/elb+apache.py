@@ -14,7 +14,7 @@ from optparse import OptionParser
 from socket import gethostname
 from subprocess import *
 
-MIN_SERVERS = 1
+MIN_SERVERS = 0
 LOAD_BALANCER_NAME = "my-load-balancer"
 TARGET_CONN_PER_MIN_PER_BACKEND = 5 * 60 #This is probably still a bit too low
 
@@ -32,14 +32,16 @@ class ApacheWebFWScheduler(mesos.Scheduler):
     #either using keypairs or x.509 certificates
     self.cw_conn = boto.connect_cloudwatch()
     self.metrics = self.cw_conn.list_metrics()
-    print self.metrics[13]
     self.host_map = updated_host_map()
     self.kill_list = [] # a list of task ids we called killTask on but haven't 
                         # received a status update with status = KILLEd yet for
     self.elb_conn = boto.connect_elb()
     #reset the load balancer to have 0 back ends registered
-    self.elb_conn.deregister_instances(LOAD_BALANCER_NAME, 
-                                       self.host_map.values())
+    # This was causing an error for instances that weren't registered
+    #   I though I had checked that when I wrote this line so maybe
+    #   EC2 changed the behavior of deregister_instances?
+    #self.elb_conn.deregister_instances(LOAD_BALANCER_NAME, 
+    #                                   self.host_map.values())
 
   def registered(self, driver, fid):
     print "Mesos elb+apache scheduler registered as framework #%s" % fid
@@ -87,7 +89,7 @@ class ApacheWebFWScheduler(mesos.Scheduler):
       print ("Rejecting %d slots because we've launched servers on those " + \
              "machines already.") % nodes_used
     if no_more_needed > 0:
-      print "Rejecting %d slot because we've launched enough tasks." % \
+      print "Rejecting %d slot(s) because we've launched enough tasks." % \
             no_more_needed
     print "Done with resourceOffer()"
     self.lock.release()
@@ -104,6 +106,7 @@ class ApacheWebFWScheduler(mesos.Scheduler):
       if status.state == mesos.TASK_STARTING:
         print "Task " + str(status.taskId) + " reported that it's STARTING."
         del self.servers[status.taskId]
+      print "checking status update == mesos.TASK_RUNNING"
       if status.state == mesos.TASK_RUNNING:
         print ("Task %s reported that it's RUNNING, reconfiguring elb to " + 
               "include it in webfarm now.") % str(status.taskId)
@@ -116,16 +119,18 @@ class ApacheWebFWScheduler(mesos.Scheduler):
         lbs = self.elb_conn.register_instances(LOAD_BALANCER_NAME, 
                                                [instance_id])
         print "Load balancer reported all backends as: %s." % str(lbs)
+      print "checking status update == mesos.TASK_FINISHED"
       if status.state == mesos.TASK_FINISHED:
-        del self.servers[status.taskId]
         print "Task %s reported FINISHED (state %s)." % \
               str(status.taskId), str(status.state)
+        del self.servers[status.taskId]
       if status.state == mesos.TASK_FAILED:
         print "Task %s reported that it FAILED!" % str(status.taskId)
         del self.servers[status.taskId]
       if status.state == mesos.TASK_KILLED:
-        print "Task %s reported that it was KILLED!" % str(status.taskId)
-        del self.servers[status.taskId]
+        #print "Task %s reported that it was KILLED!" % str(status.taskId)
+        print "Task reported that it was KILLED!"
+        #del self.servers[status.taskId]
       if status.state == mesos.TASK_LOST:
         print "Task %s was reported as LOST!" % str(status.taskId)
         del self.servers[status.taskId]
@@ -136,8 +141,8 @@ class ApacheWebFWScheduler(mesos.Scheduler):
     print "In kill_backends(), killing %i backends" % num
     host_names, host_ids = [], []
     for m,n in self.servers.items()[:num]:
-      host_ids.append(m)
       host_names.append(n)
+      host_ids.append(m)
     print "host_names[] is " + str(host_names) + "."
     instance_ids = [self.host_map[i] for i in host_names]
     print "Deregistering instance ids from elb: " + str(instance_ids) + "."
@@ -167,10 +172,17 @@ def monitor(sched):
     sched.lock.acquire()
     try:
       #get the RequestCount metric for our load balancer 
-      rct = [m for m in sched.metrics if str(m) == "Metric:RequestCount"][0]
-      result = rct.query(datetime.datetime.now()-datetime.timedelta(minutes=1),
-                                   datetime.datetime.now(), 'Sum', 'Count', 60)
-      print "Request count query returned: %s" % result
+      print "getting RequestCount metric for our load balancer"
+      rc = [m for m in sched.metrics if str(m) == "Metric:RequestCount"]
+      if len(rc) <= 0:
+        print "No RequestCount metric found"
+        result = 0
+      else:
+        print "getting RequestCount metric for our load balancer"
+        result=rc[0].query(datetime.datetime.now()-
+                           datetime.timedelta(minutes=1),
+                           datetime.datetime.now(), 'Sum', 'Count', 60)
+        print "Request count query returned: %s" % result
       if len(result) == 0:
         sched.desired_servers = 1
         print "RequestCount was 0, so set sched.desired_servers to " + \
