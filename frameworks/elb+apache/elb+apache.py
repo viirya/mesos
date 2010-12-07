@@ -15,8 +15,8 @@ from socket import gethostname
 from subprocess import *
 
 MIN_SERVERS = 0
-LOAD_BALANCER_NAME = "my-load-balancer"
-TARGET_CONN_PER_MIN_PER_BACKEND = 5 * 60 #This is probably still a bit too low
+LOAD_BALANCER_NAME = "my-load-balancer-2"
+TARGET_CONN_PER_MIN_PER_BACKEND = 1000 #This is probably still a bit too low
 
 class ApacheWebFWScheduler(mesos.Scheduler):
   def __init__(self):
@@ -53,6 +53,13 @@ class ApacheWebFWScheduler(mesos.Scheduler):
   def getExecutorInfo(self, driver):
     execPath = os.path.join(os.getcwd(), "startapache.sh")
     return mesos.ExecutorInfo(execPath, "")
+
+  def error(self, driver, err_code, message):
+    print "ERROR!!!! CODE: " + str(err_code) + str(message)
+
+  def frameworkMessage(self, driver, message):
+    print "got framework message: " 
+    print str(message)
 
   def resourceOffer(self, driver, oid, slave_offers):
     print "\nGot resource offer %s with %s slots." % (oid, len(slave_offers))
@@ -95,9 +102,9 @@ class ApacheWebFWScheduler(mesos.Scheduler):
     self.lock.release()
 
   def statusUpdate(self, driver, status):
+    self.lock.acquire()
     print "\nReceived status update from taskID " + str(status.taskId) + \
           ", with state: " + str(status.state)
-    self.lock.acquire()
     if not status.taskId in self.servers.keys():
       print "This status was from a node where the server wasn't " + \
             "(supposed to be) running."
@@ -114,16 +121,20 @@ class ApacheWebFWScheduler(mesos.Scheduler):
               LOAD_BALANCER_NAME
         host_name = self.servers[status.taskId]
         print "Task's hostname is %s." % host_name
+        print "self.host_map is " + str(self.host_map)
         instance_id = self.host_map[host_name]
         print "Task's instance id is " + instance_id
         lbs = self.elb_conn.register_instances(LOAD_BALANCER_NAME, 
                                                [instance_id])
         print "Load balancer reported all backends as: %s." % str(lbs)
-      print "checking status update == mesos.TASK_FINISHED"
+      print("checking status update == mesos.TASK_FINISHED (enum " +
+            str(mesos.TASK_FINISHED) + ")")
       if status.state == mesos.TASK_FINISHED:
-        print "Task %s reported FINISHED (state %s)." % \
-              str(status.taskId), str(status.state)
+        print "Task %s reported FINISHED (state %s)." % (str(status.taskId), str(status.state))
         del self.servers[status.taskId]
+      print("checking status update == mesos.TASK_FINISHED (enum " +
+            str(mesos.TASK_FINISHED) + ")")
+
       if status.state == mesos.TASK_FAILED:
         print "Task %s reported that it FAILED!" % str(status.taskId)
         del self.servers[status.taskId]
@@ -157,10 +168,12 @@ class ApacheWebFWScheduler(mesos.Scheduler):
 
 
 def updated_host_map():
+  print "in updated_host_map()"
   conn = boto.connect_ec2()
   reservations = conn.get_all_instances()
   i = [i.instances for i in reservations]
   instances = [item for sublist in i for item in sublist]
+  print "returning updated hostmap: " + str(dict([(str(i.private_dns_name), str(i.id)) for i in instances]))
   return dict([(str(i.private_dns_name), str(i.id)) for i in instances])
 
 
@@ -174,6 +187,8 @@ def monitor(sched):
       #get the RequestCount metric for our load balancer 
       print "getting RequestCount metric for our load balancer"
       rc = [m for m in sched.metrics if str(m) == "Metric:RequestCount"]
+      rc = [m for m in sched.metrics if str(m) == 
+            ("Metric:RequestCount(LoadBalancerName,"+LOAD_BALANCER_NAME)+")"]
       if len(rc) <= 0:
         print "No RequestCount metric found"
         result = 0
