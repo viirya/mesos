@@ -186,7 +186,6 @@ def monitor(sched):
     try:
       #get the RequestCount metric for our load balancer 
       print "getting RequestCount metric for our load balancer"
-      rc = [m for m in sched.metrics if str(m) == "Metric:RequestCount"]
       rc = [m for m in sched.metrics if str(m) == 
             ("Metric:RequestCount(LoadBalancerName,"+LOAD_BALANCER_NAME)+")"]
       if len(rc) <= 0:
