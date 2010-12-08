@@ -9,12 +9,13 @@ import Queue
 import sys
 import threading
 import time
+import re
 
 from optparse import OptionParser
 from socket import gethostname
 from subprocess import *
 
-MIN_SERVERS = 0
+MIN_SERVERS = 1
 LOAD_BALANCER_NAME = "my-load-balancer-2"
 TARGET_CONN_PER_MIN_PER_BACKEND = 280 #This is probably still a bit too low
 
@@ -30,6 +31,7 @@ class ApacheWebFWScheduler(mesos.Scheduler):
     self.desired_servers = 1
     #AWS environment has to be set up
     #either using keypairs or x.509 certificates
+    self.request_rate = -1
     self.cw_conn = boto.connect_cloudwatch()
     self.metrics = self.cw_conn.list_metrics()
     self.host_map = updated_host_map()
@@ -69,7 +71,8 @@ class ApacheWebFWScheduler(mesos.Scheduler):
     for offer in slave_offers:
       if offer.host in self.servers.values():
         nodes_used += 1
-      elif len(self.servers) >= self.desired_servers and len(self.servers) > 0:
+      elif len(self.servers) >= self.desired_servers \
+           and len(self.servers) >= MIN_SERVERS:
         no_more_needed += 1
       elif int(offer.params['mem']) < 1024:
         print "Rejecting offer because it doesn't contain enough memory" + \
@@ -177,6 +180,50 @@ def updated_host_map():
   return dict([(str(i.private_dns_name), str(i.id)) for i in instances])
 
 
+def get_request_count_elb(sched):
+  rc = [m for m in sched.metrics if str(m) == 
+        ("Metric:RequestCount(LoadBalancerName,"+LOAD_BALANCER_NAME)+")"]
+  if len(rc) <= 0:
+    print "No RequestCount metric found"
+    result = 0
+  else:
+    print "getting RequestCount metric for our load balancer"
+    result=rc[0].query(datetime.datetime.now()-
+                       datetime.timedelta(minutes=1),
+                       datetime.datetime.now(), 'Sum', 'Count', 60)
+    print "Request count query returned: %s" % result
+  if len(result) == 0:
+    return 0
+  else:
+    #TODO(andyk): Probably want to weight this to smooth out ups and downs
+    r = max(result, key=lambda x: x["Timestamp"])
+    return r["Sum"]
+
+
+def get_request_count_apache(sched):
+  print "getting server-status from slaves registered with framework"
+  total_hits = 0
+  for hostname in sched.servers.itervalues():
+    print "tid and hostname are "
+    conn = httplib.HTTPConnection(hostname)
+    conn.request("GET", "/server-status?auto")
+    r1 = conn.getresponse()
+    print r1.status, r1.reason
+    regex = re.compile(r"Total Accesses:[^\d]*([0-9]*)")
+    count = regex.match(r1.read())
+    if count != None:
+      print "adding " + str(count.group(1)) + " to total_hits"
+      total_hits += int(count.group(1))
+      print "total_hits is now: " + str(total_hits)
+
+  curr_delta = total_hits - sched.request_rate
+  if sched.request_rate != -1:
+    # first time we compute delta, it'll be way off, so make it 0
+    # to avoid accepting a bunch of tasks that aren't needed
+    curr_delta = 0
+    sched.request_rate = curr_delta
+  return curr_delta
+
 def monitor(sched):
   while True:
     #ELB only reports "metrics" every minute at its most fine granularity
@@ -186,28 +233,17 @@ def monitor(sched):
     try:
       #get the RequestCount metric for our load balancer 
       print "getting RequestCount metric for our load balancer"
-      rc = [m for m in sched.metrics if str(m) == 
-            ("Metric:RequestCount(LoadBalancerName,"+LOAD_BALANCER_NAME)+")"]
-      if len(rc) <= 0:
-        print "No RequestCount metric found"
-        result = 0
-      else:
-        print "getting RequestCount metric for our load balancer"
-        result=rc[0].query(datetime.datetime.now()-
-                           datetime.timedelta(minutes=1),
-                           datetime.datetime.now(), 'Sum', 'Count', 60)
-        print "Request count query returned: %s" % result
-      if len(result) == 0:
-        sched.desired_servers = 1
+      #rc = get_request_count_elb(sched)
+      rc = get_request_count_apache(sched)
+      if rc == 0:
+        sched.desired_servers = MIN_SERVERS
         print "RequestCount was 0, so set sched.desired_servers to " + \
-              str(sched.desired_servers)
+              str(sched.desired_servers) + "MIN_SERVERS: " + str(MIN_SERVERS)
       else:
-        #TODO(andyk): Probably want to weight this to smooth out ups and downs
-        r = max(result, key=lambda x: x["Timestamp"])
-        new_num_servers = int(r["Sum"] / TARGET_CONN_PER_MIN_PER_BACKEND)
-        sched.desired_servers = max(new_num_servers,1)
-        print "RequestCount was " + str(result[0]["Sum"]) + \
-              ", setting sched.desired_servers = " + str(sched.desired_servers) 
+        new_num_servers = int(rc / TARGET_CONN_PER_MIN_PER_BACKEND)
+        sched.desired_servers = max(new_num_servers, MIN_SERVERS)
+        print "RequestCount was " +  + \
+        ", setting sched.desired_servers = " + str(sched.desired_servers) 
       print "len(sched.servers) is " + str(len(sched.servers))
       if sched.desired_servers < len(sched.servers):
         print "Time to kill some servers"

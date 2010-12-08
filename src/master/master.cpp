@@ -274,7 +274,7 @@ void Master::operator () ()
     LOG(FATAL) << "Unrecognized allocator type: " << allocatorType;
 
   link(spawn(new AllocatorTimer(self())));
-  //link(spawn(new SharesPrinter(self())));
+  link(spawn(new SharesPrinter(self())));
 
   while (true) {
     switch (receive()) {
