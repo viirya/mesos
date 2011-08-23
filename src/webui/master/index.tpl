@@ -93,15 +93,6 @@
 %   total_mem += slave['resources']['mem']
 % end
 
-% running_cpus = 0
-% running_mem = 0
-% for framework in state['frameworks']:
-%   for task in framework['tasks']:
-%     running_cpus += task['resources']['cpus']
-%     running_mem += task['resources']['mem']
-%   end
-% end
-
 % offered_cpus = 0
 % offered_mem = 0
 % for framework in state['frameworks']:
@@ -112,6 +103,16 @@
 %     end
 %   end
 % end
+
+% running_cpus = 0
+% running_mem = 0
+% for framework in state['frameworks']:
+%   running_cpus += framework['resources']['cpus']
+%   running_mem += framework['resources']['mem']
+% end
+% running_cpus -= offered_cpus
+% running_mem -= offered_mem
+
 % idle_cpus = total_cpus - (offered_cpus + running_cpus)
 % idle_mem = total_mem - (offered_mem + running_mem)
 
@@ -119,28 +120,28 @@
   <tr>
     <td>Total:</td>
     <td>&nbsp;</td>
-    <td align="right">{{total_cpus}} CPU</td>
+    <td align="right">{{total_cpus}} CPUs</td>
     <td>&nbsp;&nbsp;</td>
     <td align="right">{{format_mem(total_mem)}} MEM</td>
   </tr>
   <tr>
     <td>Used:</td>
     <td>&nbsp;</td>
-    <td align="right">{{running_cpus}} CPU</td>
+    <td align="right">{{running_cpus}} CPUs</td>
     <td>&nbsp;&nbsp;</td>
     <td align="right">{{format_mem(running_mem)}} MEM</td>
   </tr>
   <tr>
     <td>Offered:</td>
     <td>&nbsp;</td>
-    <td align="right">{{offered_cpus}} CPU</td>
+    <td align="right">{{offered_cpus}} CPUs</td>
     <td>&nbsp;&nbsp;</td>
     <td align="right">{{format_mem(offered_mem)}} MEM</td>
   </tr>
   <tr>
     <td>Idle:</td>
     <td>&nbsp;</td>
-    <td align="right">{{idle_cpus}} CPU</td>
+    <td align="right">{{idle_cpus}} CPUs</td>
     <td>&nbsp;&nbsp;</td>
     <td align="right">{{format_mem(idle_mem)}} MEM</td>
   </tr>

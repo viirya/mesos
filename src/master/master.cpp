@@ -227,6 +227,11 @@ void Master::registerOptions(Configurator* configurator)
       "root_submissions",
       "Can root submit frameworks?",
       true);
+
+  configurator->addOption<int>(
+      "failover_timeout",
+      "Framework failover timeout in seconds",
+      60 * 60 * 24);
 }
 
 
@@ -315,6 +320,8 @@ void Master::initialize()
   nextFrameworkId = 0;
   nextSlaveId = 0;
   nextOfferId = 0;
+
+  failoverTimeout = conf.get<int>("failover_timeout", 60 * 60 * 24);
 
   // Start all the statistics at 0.
   CHECK(TASK_STARTING == TaskState_MIN);
@@ -567,6 +574,13 @@ void Master::reregisterFramework(const FrameworkID& frameworkId,
         foreachvalue (Task* task, slave->tasks) {
           if (framework->id == task->framework_id()) {
             framework->addTask(task);
+            // Also add the task's executor for resource accounting.
+            if (!framework->hasExecutor(slave->id, task->executor_id())) {
+              CHECK(slave->hasExecutor(framework->id, task->executor_id()));
+              const ExecutorInfo& executorInfo =
+                slave->executors[framework->id][task->executor_id()];
+              framework->addExecutor(slave->id, executorInfo);
+            }
           }
         }
       }
@@ -960,6 +974,7 @@ void Master::exitedExecutor(const SlaveID& slaveId,
 
       // Remove executor from slave.
       slave->removeExecutor(frameworkId, executorId);
+      framework->removeExecutor(slave->id, executorId);
 
       // TODO(benh): Send the framework it's executor's exit status?
       // Or maybe at least have something like
@@ -1040,7 +1055,7 @@ void Master::exited()
       framework->active = false;
 
       // Delay dispatching a message to ourselves for the timeout.
-      delay(FRAMEWORK_FAILOVER_TIMEOUT, self(),
+      delay(failoverTimeout, self(),
             &Master::frameworkFailoverTimeout,
             framework->id, framework->reregisteredTime);
 
@@ -1270,6 +1285,8 @@ void Master::launchTask(Framework* framework, const TaskDescription& task)
 
   if (!slave->hasExecutor(framework->id, executorInfo.executor_id())) {
     slave->addExecutor(framework->id, executorInfo);
+    CHECK(!framework->hasExecutor(slave->id, executorInfo.executor_id()));
+    framework->addExecutor(slave->id, executorInfo);
   }
 
   slave->addTask(t);
@@ -1383,6 +1400,16 @@ void Master::removeFramework(Framework* framework)
     removeOffer(offer, ORR_FRAMEWORK_LOST, offer->resources);
   }
 
+  // Remove the framework's executors for correct resource accounting.
+  foreachkey (const SlaveID& slaveId, framework->executors) {
+    Slave* slave = getSlave(slaveId);
+    if (slave != NULL) {
+      foreachkey (const ExecutorID& executorId, framework->executors[slaveId]) {
+        slave->removeExecutor(framework->id, executorId);
+      }
+    }
+  }
+
   // TODO(benh): Similar code between removeFramework and
   // failoverFramework needs to be shared!
 
@@ -1444,6 +1471,12 @@ void Master::readdSlave(Slave* slave,
 	if (!slave->hasExecutor(task.framework_id(), task.executor_id())) {
 	  slave->addExecutor(task.framework_id(), executorInfo);
 	}
+        // Also add it to the framework if it has re-registered with us.
+        Framework* framework = getFramework(task.framework_id());
+        if (framework != NULL) {
+          CHECK(!framework->hasExecutor(slave->id, task.executor_id()));
+          framework->addExecutor(slave->id, executorInfo);
+        }
 	break;
       }
     }
@@ -1520,6 +1553,16 @@ void Master::removeSlave(Slave* slave)
       }
     }
     removeOffer(offer, ORR_SLAVE_LOST, otherSlaveResources);
+  }
+
+  // Remove executors from the slave for proper resource accounting.
+  foreachkey (const FrameworkID& frameworkId, slave->executors) {
+    Framework* framework = getFramework(frameworkId);
+    if (framework != NULL) {
+      foreachkey (const ExecutorID& executorId, slave->executors[frameworkId]) {
+        framework->removeExecutor(slave->id, executorId);
+      }
+    }
   }
   
   // Remove slave from any filters
